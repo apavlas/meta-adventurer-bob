@@ -1,0 +1,5 @@
+// BobBridge HTTPS. Leave blank in git. Override locally or via scheme env.
+// Do not commit tokens.
+BOB_BRIDGE_MODE = stub
+BOB_BRIDGE_BASE_URL =
+BOB_BRIDGE_BEARER_TOKEN =

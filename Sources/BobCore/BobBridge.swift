@@ -42,20 +42,38 @@ public struct BobBridgeResponse: Codable, Equatable, Sendable {
 
 public enum BobBridgeError: Error, Equatable, Sendable {
     case sessionCut
+    case unauthorized
+    case cosUnavailable
     case remoteEndpointNotConfigured
+    case invalidResponse(statusCode: Int)
+
+    /// Lex fail line for 401 / 503 / other session cuts.
+    public var failSpokenLine: String { GoldenSpokenLine.fail }
+
+    public static func failSpokenLine(for error: Error) -> String {
+        (error as? BobBridgeError)?.failSpokenLine ?? GoldenSpokenLine.fail
+    }
+
+    public static func fromHTTPStatus(_ statusCode: Int) -> BobBridgeError {
+        switch statusCode {
+        case 401: return .unauthorized
+        case 503: return .cosUnavailable
+        default: return .invalidResponse(statusCode: statusCode)
+        }
+    }
 }
 
-/// Transport-agnostic Bob. Swap `StubBobService` for an HTTP/WS client later.
-/// Do not invent a live Bob API URL.
+/// Transport-agnostic Bob. Use `HttpsBobTransport` for POST `/v0/bob/turn`.
+/// WebSocket is deferred until barge-in. Do not invent a live Bob API URL.
 public protocol BobServing: Sendable {
     func complete(_ request: BobBridgeRequest) async throws -> BobBridgeResponse
 }
 
-/// Future remote transport. `endpoint` must be injected by the host app; v0 leaves it nil.
 public protocol BobTransport: Sendable {
     func send(_ request: BobBridgeRequest) async throws -> BobBridgeResponse
 }
 
+/// Sentinel when remote credentials are absent. Prefer `HttpsBobTransport`.
 public struct UnconfiguredRemoteBobTransport: BobTransport {
     public var endpoint: String?
 
@@ -65,9 +83,6 @@ public struct UnconfiguredRemoteBobTransport: BobTransport {
 
     public func send(_ request: BobBridgeRequest) async throws -> BobBridgeResponse {
         _ = request
-        guard endpoint != nil else {
-            throw BobBridgeError.remoteEndpointNotConfigured
-        }
         throw BobBridgeError.remoteEndpointNotConfigured
     }
 }
@@ -80,7 +95,13 @@ public struct BobBridgeClient: BobServing {
     }
 
     public func complete(_ request: BobBridgeRequest) async throws -> BobBridgeResponse {
-        let raw = try await transport.send(request)
-        return SpokenCaps.enforceReply(spokenLine: raw.spokenLine, deskFull: raw.deskFull)
+        do {
+            let raw = try await transport.send(request)
+            return SpokenCaps.enforceReply(spokenLine: raw.spokenLine, deskFull: raw.deskFull)
+        } catch let error as BobBridgeError {
+            throw error
+        } catch {
+            throw BobBridgeError.sessionCut
+        }
     }
 }

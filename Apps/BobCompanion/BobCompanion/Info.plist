@@ -55,6 +55,12 @@
 		<string>bluetooth-peripheral</string>
 		<string>external-accessory</string>
 	</array>
+	<key>BOB_BRIDGE_MODE</key>
+	<string>$(BOB_BRIDGE_MODE)</string>
+	<key>BOB_BRIDGE_BASE_URL</key>
+	<string>$(BOB_BRIDGE_BASE_URL)</string>
+	<key>BOB_BRIDGE_BEARER_TOKEN</key>
+	<string>$(BOB_BRIDGE_BEARER_TOKEN)</string>
 	<key>UISupportedExternalAccessoryProtocols</key>
 	<array>
 		<string>com.meta.ar.wearable</string>

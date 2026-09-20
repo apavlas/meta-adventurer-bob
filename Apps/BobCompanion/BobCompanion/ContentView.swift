@@ -38,6 +38,7 @@ struct ContentView: View {
             labeled("Status", session.status)
             labeled("Registration", session.registration)
             labeled("Device session", session.sessionState)
+            labeled("BobBridge", session.bridgeMode)
             labeled("STT", session.liveSTTAvailable ? "phone_mic live" : "phone_mic (demo inject until mic is granted)")
             if !session.lastSpoken.isEmpty {
                 labeled("Last spoken", session.lastSpoken)

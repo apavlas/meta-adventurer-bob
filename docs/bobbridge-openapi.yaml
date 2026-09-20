@@ -1,0 +1,135 @@
+openapi: 3.0.3
+info:
+  title: BobBridge
+  version: 0.1.0
+  description: |
+    Locked v0 HTTPS contract for the iOS companion talking to Bob (Chief of Staff).
+
+    `POST /v0/bob/turn` with Bearer auth. The client always tags `stt_source`
+    (`phone_mic` today; `hfp` later) and applies spoken caps when it plays the
+    response. The server should apply the same caps.
+
+    Spoken caps:
+    - open ≤12 words
+    - reply ≤2 sentences / ~35 words
+    - otherwise `spoken_line` = `Full note on desk.` and the long text goes in `desk_full`
+    - end / fail = one sentence
+
+    Fail spoken line (401 Unauthorized, 503 CoS unavailable, or other cut):
+    `Session cut — check the phone.`
+
+    WebSocket is deferred until barge-in. No production base URL is defined here.
+  contact:
+    name: Bob companion
+servers:
+  - url: '{baseUrl}'
+    variables:
+      baseUrl:
+        default: https://bob-bridge.example.invalid
+        description: >
+          Injected per environment via BOB_BRIDGE_BASE_URL.
+          This repository does not invent a live production URL.
+security:
+  - bearerAuth: []
+paths:
+  /v0/bob/turn:
+    post:
+      operationId: bobTurn
+      summary: Complete one Bob turn
+      description: |
+        Send a finalized STT utterance for the active session and receive the
+        spoken line Bob should play. Request fields are all required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BobTurnRequest'
+            examples:
+              phoneMic:
+                value:
+                  session_id: 'session-demo'
+                  utterance: What's next?
+                  stt_source: phone_mic
+      responses:
+        '200':
+          description: Turn completed. Client enforces spoken caps before TTS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BobTurnResponse'
+              examples:
+                reply:
+                  value:
+                    spoken_line: Next up is the 2pm with Sue.
+                    desk_full: null
+                overBudget:
+                  value:
+                    spoken_line: Full note on desk.
+                    desk_full: >
+                      Sue’s 2pm is in the west conference room. Bring the Q3 deck,
+                      the hiring plan, and last week’s open questions.
+        '401':
+          description: |
+            Unauthorized. Client speaks `Session cut — check the phone.`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BobTurnError'
+        '503':
+          description: |
+            CoS unavailable. Client speaks `Session cut — check the phone.`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BobTurnError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+      description: Injected via BOB_BRIDGE_BEARER_TOKEN. Do not commit secrets.
+  schemas:
+    STTSource:
+      type: string
+      enum:
+        - phone_mic
+        - hfp
+    BobTurnRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - session_id
+        - utterance
+        - stt_source
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+        utterance:
+          type: string
+          minLength: 1
+        stt_source:
+          $ref: '#/components/schemas/STTSource'
+    BobTurnResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - spoken_line
+      properties:
+        spoken_line:
+          type: string
+          minLength: 1
+        desk_full:
+          type: string
+          nullable: true
+    BobTurnError:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+        spoken_line:
+          type: string
+          description: Optional. Client always uses the Lex fail line if the turn is cut.

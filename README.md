@@ -9,7 +9,7 @@ This is the smallest working **mock** path:
 3. DAT `DeviceSession` start / stop
 4. iOS CTA **Talk to Bob** starts the session
 5. Phone-mic STT tagged `stt_source = phone_mic`
-6. `BobBridge` stub round-trip
+6. `BobBridge` stub (default) or HTTPS `POST /v0/bob/turn` when configured
 7. TTS / `spoken_line`
 
 First proof: **one logged round-trip** with the golden spoken lines.
@@ -94,18 +94,65 @@ Mock session-up, in order:
 
 ## BobBridge contract
 
-**In:** `utterance`, `stt_source` (`phone_mic` \| `hfp`), `session_id`
+Locked OpenAPI 3.0.3: [`docs/bobbridge-openapi.yaml`](docs/bobbridge-openapi.yaml).
 
-**Out:** `spoken_line` (always), optional `desk_full`
+**HTTPS** `POST /v0/bob/turn` with Bearer auth.
 
-**Caps:**
+**Request JSON (required):** `session_id`, `utterance`, `stt_source` (`phone_mic` \| `hfp`)
+
+**200 JSON:** `spoken_line` (required), `desk_full` (string or null)
+
+**401 Unauthorized** and **503 CoS unavailable:** client speaks `Session cut — check the phone.`
+
+**Caps** (client enforces when applying a 200; server should too):
 
 - open ≤12 words
 - reply ≤2 sentences / ~35 words
 - longer desk answer → `spoken_line = Full note on desk.` + `desk_full`
 - end / fail = one sentence
 
-v0 Bob is `StubBobService`. `BobBridgeClient` + `UnconfiguredRemoteBobTransport` are the swap points for a later HTTP/WS endpoint. **No live Bob URL is invented.**
+Default Bob is the local **stub** (`StubBobService`) so the mock demo works offline. `HttpsBobTransport` POSTs when `BOB_BRIDGE_MODE=remote` and both base URL and Bearer are set. **No production URL is committed.** WebSocket is deferred until barge-in.
+
+### Stub vs remote
+
+Resolution order: process environment, then `Info.plist` / xcconfig. Unexpanded `$(BOB_BRIDGE_*)` placeholders are ignored.
+
+| Key | Meaning |
+|---|---|
+| `BOB_BRIDGE_MODE` | `stub` (default) or `remote` |
+| `BOB_BRIDGE_BASE_URL` | Origin only, e.g. `https://bob-bridge.example.invalid` — no live URL in this repo |
+| `BOB_BRIDGE_BEARER_TOKEN` | Bearer token. Never commit it. |
+
+If mode is `remote` but the URL or token is missing, the app **stays on stub** and logs why (`[BobBridge] … reason=…`).
+
+Set them in any of:
+
+1. Xcode scheme Environment Variables (preferred for a token)
+2. `Apps/BobCompanion/Config/BobBridge.local.xcconfig` (gitignored), included from Debug/Release
+3. `Apps/BobCompanion/Config/BobBridge.xcconfig` placeholders (empty in git)
+
+```xcconfig
+BOB_BRIDGE_MODE = remote
+BOB_BRIDGE_BASE_URL = https://your-injected-host.example
+BOB_BRIDGE_BEARER_TOKEN = your-local-token
+```
+
+### Example curl
+
+```bash
+curl -sS -X POST "$BOB_BRIDGE_BASE_URL/v0/bob/turn" \
+  -H "Authorization: Bearer $BOB_BRIDGE_BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"session-demo","utterance":"What'\''s next?","stt_source":"phone_mic"}'
+```
+
+Expected 200:
+
+```json
+{"spoken_line":"Next up is the 2pm with Sue.","desk_full":null}
+```
+
+401 / 503 → companion speaks `Session cut — check the phone.`
 
 ## Later: real HFP
 
@@ -118,3 +165,4 @@ Adventurer hands-free (HFP) audio is out of scope. Keep tagging `phone_mic` unti
 - Perfect Process / PerfectRouter
 - Custom wake word
 - Camera / Display experiences
+- WebSocket BobBridge (deferred until barge-in)

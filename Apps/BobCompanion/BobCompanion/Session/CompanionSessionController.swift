@@ -21,12 +21,27 @@ final class CompanionSessionController: ObservableObject {
     @Published var lastUtterance = ""
     @Published var log = RoundTripLog()
     @Published var liveSTTAvailable = false
+    @Published var bridgeMode = "stub"
+    @Published var bridgeStatus = "stub (default)"
 
     private let wearable = DATMockWearableSession()
     private let recognizer = PhoneMicRecognizer()
     private let speaker = SpokenLineSpeaker()
-    private var bob: any BobServing = StubBobService(scenario: .reply)
+    private var bob: any BobServing
     private var sessionId: String?
+
+    init(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:]
+    ) {
+        let resolved = BobBridgeConfiguration.makeService(
+            environment: environment,
+            infoDictionary: infoDictionary
+        )
+        bob = resolved.service
+        bridgeMode = resolved.configuration.resolvedMode.rawValue
+        bridgeStatus = resolved.configuration.logLine
+    }
 
     var isListening: Bool { phase == .listening || phase == .thinking }
 
@@ -44,7 +59,11 @@ final class CompanionSessionController: ObservableObject {
         } catch {
             phase = .failed
             status = error.localizedDescription
-            await speakAndLogFail(note: error.localizedDescription, sessionId: nil)
+            await speakAndLogFail(
+                note: error.localizedDescription,
+                sessionId: nil,
+                spokenLine: BobBridgeError.failSpokenLine(for: error)
+            )
         }
     }
 
@@ -84,7 +103,11 @@ final class CompanionSessionController: ObservableObject {
         } catch {
             phase = .failed
             status = error.localizedDescription
-            await speakAndLogFail(note: error.localizedDescription, sessionId: sessionId)
+            await speakAndLogFail(
+                note: error.localizedDescription,
+                sessionId: sessionId,
+                spokenLine: BobBridgeError.failSpokenLine(for: error)
+            )
         }
     }
 
@@ -152,7 +175,11 @@ final class CompanionSessionController: ObservableObject {
             phase = .failed
             recognizer.stop()
             wearable.stopDeviceSession()
-            await speakAndLogFail(note: String(describing: error), sessionId: sessionId)
+            await speakAndLogFail(
+                note: String(describing: error),
+                sessionId: sessionId,
+                spokenLine: BobBridgeError.failSpokenLine(for: error)
+            )
         }
     }
 
@@ -183,12 +210,12 @@ final class CompanionSessionController: ObservableObject {
         log.append(entry)
     }
 
-    private func speakAndLogFail(note: String, sessionId: String?) async {
+    private func speakAndLogFail(note: String, sessionId: String?, spokenLine: String = GoldenSpokenLine.fail) async {
         status = note
         await speakAndLog(
             path: .fail,
             role: .fail,
-            line: GoldenSpokenLine.fail,
+            line: spokenLine,
             sessionId: sessionId,
             sttSource: .phoneMic,
             sttCapture: nil,

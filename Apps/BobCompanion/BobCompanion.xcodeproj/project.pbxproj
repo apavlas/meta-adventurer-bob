@@ -32,6 +32,9 @@
 		DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpokenLineSpeaker.swift; sourceTree = "<group>"; };
 		7AFF21FC72DD4F66B0056D2A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D123878C485F42268D1A1025 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		61A0B0C0D0E0F00112233445 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		62A0B0C0D0E0F00112233446 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		63A0B0C0D0E0F00112233447 /* BobBridge.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BobBridge.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				9B58ACD672FF4C73AC0FBB68 /* BobCompanion */,
+				64A0B0C0D0E0F00112233448 /* Config */,
 				5F0F84E80FAB433FA0D24CEA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -87,6 +91,16 @@
 				DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */,
 			);
 			path = Session;
+			sourceTree = "<group>";
+		};
+		64A0B0C0D0E0F00112233448 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				63A0B0C0D0E0F00112233447 /* BobBridge.xcconfig */,
+				61A0B0C0D0E0F00112233445 /* Debug.xcconfig */,
+				62A0B0C0D0E0F00112233446 /* Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		3E5EBFDA2E484A41B9D040A6 /* Preview Content */ = {
@@ -234,6 +248,7 @@
 		};
 		692B90C131864FBB816D4C0D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 61A0B0C0D0E0F00112233445 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -268,6 +283,7 @@
 		};
 		0D2F7AE6A3804D8CBBF72537 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 62A0B0C0D0E0F00112233446 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
