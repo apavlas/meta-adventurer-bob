@@ -1,7 +1,8 @@
 import Foundation
 
 /// Microphone source tagged on every BobBridge request.
-/// v0 mock uses `phone_mic`. Real Adventurer HFP comes later.
+/// Mock and real DAT both use `phone_mic` until glasses HFP / SCO capture exists.
+/// Do not send `hfp` until that route is actually the input.
 public enum STTSource: String, Codable, Sendable, CaseIterable {
     case phoneMic = "phone_mic"
     case hfp = "hfp"

@@ -41,7 +41,7 @@
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Bob needs Bluetooth to reach Meta Adventurer glasses when a real device is paired later.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Bob listens on this iPhone microphone for the v0 mock path (stt_source = phone_mic). Glasses HFP comes later.</string>
+	<string>Bob listens on this iPhone microphone and tags stt_source = phone_mic until glasses HFP audio is wired.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Bob turns what you say on this iPhone into text, tags it phone_mic, and sends it to BobBridge.</string>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -55,6 +55,8 @@
 		<string>bluetooth-peripheral</string>
 		<string>external-accessory</string>
 	</array>
+	<key>BOB_USE_MOCK_DEVICE</key>
+	<string>$(BOB_USE_MOCK_DEVICE)</string>
 	<key>BOB_BRIDGE_MODE</key>
 	<string>$(BOB_BRIDGE_MODE)</string>
 	<key>BOB_BRIDGE_BASE_URL</key>

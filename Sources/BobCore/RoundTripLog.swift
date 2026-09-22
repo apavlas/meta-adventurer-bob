@@ -26,6 +26,7 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
     public var spokenRole: SpokenRole
     public var deskFull: String?
     public var metaAIUsed: Bool
+    public var devicePath: DevicePathKind
     public var note: String
 
     public init(
@@ -39,6 +40,7 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
         spokenRole: SpokenRole,
         deskFull: String? = nil,
         metaAIUsed: Bool = false,
+        devicePath: DevicePathKind = .real,
         note: String = ""
     ) {
         self.id = id
@@ -51,6 +53,7 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
         self.spokenRole = spokenRole
         self.deskFull = deskFull
         self.metaAIUsed = metaAIUsed
+        self.devicePath = devicePath
         self.note = note
     }
 
@@ -65,6 +68,7 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
             "spoken_line=\(spokenLine)",
             "spoken_line_words=\(spokenWordCount)",
             "spoken_line_within_caps=\(withinCaps)",
+            "device_path=\(devicePath.rawValue)",
             "meta_ai=\(metaAIUsed ? "used" : "none")",
         ]
         if let sttSource {
