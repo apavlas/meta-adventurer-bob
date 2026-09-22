@@ -16,6 +16,9 @@ public enum GoldenSpokenLine: Sendable {
 
     /// Session end. Cap: one sentence.
     public static let end = "Paused — say Bob when you’re back."
+
+    /// Spoken when SpeechKit produces no final. Not a transcript.
+    public static let noFinal = "Didn’t catch that — say it again."
 }
 
 /// Hardware context for this companion. Mock pairs DAT `.metaGlasses`, not Ray-Ban Meta or Display.

@@ -116,7 +116,7 @@ struct ContentView: View {
             if session.log.entries.isEmpty {
                 Text(session.usesMockDevice
                     ? "Pair, then tap Talk to Bob. Console and this list should show device_path=mock, deviceType=META_GLASSES, meta_ai=none, stt_source=phone_mic."
-                    : "With Adventurer Connected, tap Talk to Bob and speak. If the glasses mic is the input, the log shows stt_source=hfp and hfp=wired. If the iPhone mic is still selected, it stays stt_source=phone_mic and hfp=not_wired.")
+                    : "With Adventurer Connected, tap Talk to Bob. After “Bob here. Listening.” finishes, speak. A REPLY card shows stt_source=hfp when the glasses mic is the input. If SpeechKit never finals, the card is NO_FINAL and is not an hfp transcript.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {

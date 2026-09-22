@@ -9,6 +9,7 @@ final class GoldenPathTests: XCTestCase {
         XCTAssertEqual(GoldenSpokenLine.overBudget, "Full note on desk.")
         XCTAssertEqual(GoldenSpokenLine.fail, "Session cut — check the phone.")
         XCTAssertEqual(GoldenSpokenLine.end, "Paused — say Bob when you’re back.")
+        XCTAssertEqual(GoldenSpokenLine.noFinal, "Didn’t catch that — say it again.")
     }
 
     func testLexCopyIsExact() {
@@ -27,6 +28,9 @@ final class GoldenPathTests: XCTestCase {
         XCTAssertLessThanOrEqual(SpokenCaps.wordCount(GoldenSpokenLine.reply), SpokenCaps.replyMaxWords)
         XCTAssertEqual(SpokenCaps.sentenceCount(GoldenSpokenLine.fail), 1)
         XCTAssertEqual(SpokenCaps.sentenceCount(GoldenSpokenLine.end), 1)
+        XCTAssertTrue(SpokenCaps.isWithinCaps(role: .retry, spokenLine: GoldenSpokenLine.noFinal))
+        XCTAssertLessThanOrEqual(SpokenCaps.wordCount(GoldenSpokenLine.noFinal), SpokenCaps.openMaxWords)
+        XCTAssertEqual(SpokenCaps.sentenceCount(GoldenSpokenLine.noFinal), 1)
     }
 
     func testLongDeskAnswerIsOverBudget() {
