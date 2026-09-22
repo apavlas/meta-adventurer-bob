@@ -28,8 +28,9 @@ public enum LiveListenPolicy: Sendable {
     /// Safety valve when partials never stop changing (HFP comfort noise).
     public static let maxListen: TimeInterval = 12
 
-    /// Pause after playback returns so the HFP input format is the one the tap uses.
-    public static let postRouteSettle: TimeInterval = 0.25
+    /// Pause after playback returns, before the engine starts, so HFP SCO can
+    /// leave the synthesizer. The tap is installed only after the engine is running.
+    public static let postRouteSettle: TimeInterval = 0.4
 
     /// On-device recognition accepts narrowband HFP buffers and then often never emits `isFinal`.
     /// Phone-mic capture can still require it when the recognizer supports it.
@@ -69,10 +70,14 @@ public enum LiveListenPolicy: Sendable {
     }
 
     /// Round-trip note for the retry prompt. No `stt_source` field.
-    public static func noFinalLogNote(routeToken: String?) -> String {
+    /// `capture` is tap evidence only. A zero peak is still not an HFP reply.
+    public static func noFinalLogNote(routeToken: String?, capture: CaptureEnergySummary? = nil) -> String {
         var note = "speechkit_no_final timeout_s=\(Int(noFinalTimeout)) restart_listening"
         if let routeToken, !routeToken.isEmpty, routeToken != "none" {
             note += " route=\(routeToken)"
+        }
+        if let capture {
+            note += " \(capture.logFragment)"
         }
         return note
     }

@@ -138,8 +138,8 @@ Real path (`BOB_USE_MOCK_DEVICE=NO`, physical Adventurer, Meta AI Connected, Dev
 - [ ] Header says `path real` and does not say mock. Registration does not say `mock` or `no Meta AI`.
 - [ ] Select `.metaGlasses` only — log `deviceType=META_GLASSES` (not Ray-Ban Meta, not Display).
 - [ ] After Meta AI registration, round-trip shows `device_path=real` and `meta_ai=used`.
-- [ ] After **Talk to Bob**, wait until `Bob here. Listening.` finishes, then speak into the glasses. The next card is `REPLY` with `stt_capture=live`. If the glasses mic is the input, that line shows `stt_source=hfp`, `hfp=wired`, and `audio_route=BluetoothHFP:<glasses name>`. If the iPhone mic is still selected, the same line stays `stt_source=phone_mic` and `hfp=not_wired`. Do not expect `hfp` until `audio_route` shows that hands-free port.
-- [ ] If you stay quiet, about 5 seconds later you hear `Didn’t catch that — say it again.` The card is `NO_FINAL`, has no `stt_source`, and listening starts again. That card is not a transcript.
+- [ ] After **Talk to Bob**, wait until `Bob here. Listening.` finishes, then speak into the glasses. Console shows `[Audio] tap_energy` with a non-zero `tap_peak` and `[Audio] partial chars=` before the next card. That card is `REPLY` with `stt_capture=live`. If the glasses mic is the input, that line shows `stt_source=hfp`, `hfp=wired`, and `audio_route=BluetoothHFP:<glasses name>`. If the iPhone mic is still selected, the same line stays `stt_source=phone_mic` and `hfp=not_wired`. Do not expect `hfp` until `audio_route` shows that hands-free port.
+- [ ] If you stay quiet, about 5 seconds later you hear `Didn’t catch that — say it again.` The card is `NO_FINAL`, has no `stt_source`, and listening starts again. That card is not a transcript. Its note includes `tap_buffers` and `tap_peak`.
 - [ ] Camera stream off (no `addCamera`).
 
 Mock path (`BOB_USE_MOCK_DEVICE=YES`), in order:
@@ -226,7 +226,15 @@ DAT does not capture the glasses microphone. Meta's microphone guidance is the p
 
 On the real path (`BOB_USE_MOCK_DEVICE=NO`) Bob uses mode `.voiceChat` with `.allowBluetooth` (the iOS 16 name for `.allowBluetoothHFP`). It does **not** set `.allowBluetoothA2DP` or `.defaultToSpeaker`. Those options keep the phone speaker and leave the input on the iPhone microphone. The session prefers an HFP port whose name looks like the glasses when more than one hands-free device is connected.
 
-Capture starts only after `Bob here. Listening.` has finished, then waits for the HFP input to settle before installing the recognition tap. On-device SpeechKit is not required while the input is HFP: those narrowband buffers often never produce `isFinal`. A partial that sits still for about a second ends the audio buffer so SpeechKit can finalize; if `isFinal` still does not arrive, that partial is the utterance and the route tag is whatever the input is at that moment. The route is read again when the phrase is delivered.
+`hfp=wired` is not proof that SpeechKit received samples. After TTS the route can already be `BluetoothHFP` while the SCO uplink is still the playback graph, and `.voiceChat` delivers that uplink to VoiceProcessingIO. The capture graph therefore:
+
+- prefers 16 kHz mono (HFP wideband) before the session activates
+- re-asserts `setPreferredInput` and activates the session again after the open line, so the mic direction of SCO is attached
+- enables voice processing on the engine input, then starts the engine, then installs the tap on the **running** bus format
+- if that bus rate or channel count disagrees with the hardware format, reactivates the session and restarts the engine once so the bus can renegotiate. The input node stays off the mixer: wiring it plays the mic back into the glasses, and voice processing already owns that graph
+- keeps on-device SpeechKit off for HFP. Narrowband buffers often never produce `isFinal`
+
+Capture starts only after `Bob here. Listening.` has finished. A partial that sits still for about a second ends the audio buffer so SpeechKit can finalize; if `isFinal` still does not arrive, that partial is the utterance and the route tag is whatever the input is at that moment. The route is read again when the phrase is delivered. A listen window with no partial still speaks the retry line. That line is never tagged `hfp`.
 
 `stt_source=hfp` is sent only when that **current input** is Bluetooth HFP/SCO, or a port that is clearly the glasses hands-free input. The built-in mic, a wired headset, A2DP, and Bluetooth LE with no hands-free marker stay `phone_mic`. The tag is never forced. The mock path does not enable HFP and always tags `phone_mic`.
 
@@ -235,7 +243,9 @@ Capture starts only after `Bob here. Listening.` has finished, then waits for th
 | Bluetooth HFP/SCO, or a clear glasses hands-free port | `stt_source=hfp` | `hfp=wired` and `audio_route=<port type>:<port name>` |
 | iPhone mic, wired headset, A2DP-only, or no input | `stt_source=phone_mic` | `hfp=not_wired` and `audio_route=` when a port was read |
 
-`audio_route` uses `_` instead of spaces. The same line is printed as `[Audio]` in the Xcode console, plus `available_inputs=` and `preferred_input=` when the real path configures the session.
+`audio_route` uses `_` instead of spaces. The same line is printed as `[Audio]` in the Xcode console, plus `available_inputs=`, `preferred_input=`, and `reassert_input=` when the real path configures the session.
+
+For the first 3 seconds after the tap is installed the console also prints `[Audio] tap_energy` (`tap_buffers`, `tap_rms`, `tap_peak`, `sample_rate`, `partial_events`) and `[Audio] formats` (`session_rate`, `hardware_rate`, `output_rate`, `voice_processing`). Each SpeechKit update prints `[Audio] partial chars=`. `tap_rms` is the latest buffer. `tap_peak` is the loudest sample since this listen window opened.
 
 ### Verify live HFP speak → REPLY
 
@@ -244,10 +254,10 @@ On a phone with `BOB_USE_MOCK_DEVICE=NO` (the committed default):
 1. Meta AI shows the Adventurer **Connected**. Developer Mode is on. This build keeps `MetaAppID = 0`.
 2. Run Bob. The header says `path real`. Registration reaches `registered`.
 3. Tap **Talk to Bob**. The first card is `START` / `Bob here. Listening.` with `hfp=wired` and `audio_route=BluetoothHFP:<glasses name>` when that mic is already the input.
-4. Wait until that line finishes. Console then shows `[Audio] listening armed` and `[Audio] tap sample_rate=...`. Do not speak over the open line. Capture is not running yet.
-5. Speak a short phrase into the glasses, then pause. Console shows `[Audio] utterance reason=speechkit-final` or, if SpeechKit never sets `isFinal`, `[Audio] endAudio reason=partial-silence` followed by `reason=partial-promoted`.
+4. Wait until that line finishes. Console then shows `[Audio] listening armed`, `[Audio] formats` with `voice_processing=on`, and `[Audio] tap sample_rate=...`. Do not speak over the open line. Capture is not running yet.
+5. Speak a short phrase into the glasses, then pause. Within the first 3 seconds, `[Audio] tap_energy` should show `tap_buffers` greater than 0 and `tap_peak` above `0.0050`, then `[Audio] partial chars=` greater than 0. Console then shows `[Audio] utterance reason=speechkit-final` or, if SpeechKit never sets `isFinal`, `[Audio] endAudio reason=partial-silence` followed by `reason=partial-promoted`.
 6. The next card is **REPLY**. It includes `device_path=real`, `meta_ai=used`, `stt_capture=live`, `stt_source=hfp`, `hfp=wired`, and `audio_route=BluetoothHFP:<glasses name>`.
-7. If the input is still the iPhone mic, the same REPLY card stays `stt_source=phone_mic` and `hfp=not_wired`. The tag follows the route. It is not forced.
+7. If the input is still the iPhone mic, the same REPLY card stays `stt_source=phone_mic` and `hfp=not_wired`. The tag follows the route. It is not forced. A phone-mic REPLY is still a successful turn.
 
 Golden-path demo buttons inject text. Those lines stay `stt_source=phone_mic` because they were not captured from the route.
 
@@ -256,7 +266,12 @@ Golden-path demo buttons inject text. Those lines stay `stt_source=phone_mic` be
 Stay quiet after the open line. About 5 seconds after listening is armed you hear `Didn’t catch that — say it again.`
 
 - The card is `NO_FINAL`. It has no `stt_source` and no `stt_capture`. It is not a Bob reply and not a fake `hfp` transcript.
-- Console includes `[Audio] speechkit_no_final timeout_s=5` and `restart_listening`.
+- Console includes `[Audio] speechkit_no_final timeout_s=5` and `restart_listening`. The same note on the card adds `tap_buffers`, `tap_peak`, `sample_rate`, and `partial_events`.
+- Read those fields before treating it as “SpeechKit heard nothing”:
+  - `tap_buffers=0` — the tap never fired.
+  - `tap_buffers` greater than 0 and `tap_peak=0.0000` — buffers arrived and were digital silence. The route can still be HFP.
+  - `tap_peak` above `0.0050` and `partial_events=0` — the mic has energy and SpeechKit did not return text.
+  - `partial_events` greater than 0 — a partial was logged. The next successful phrase should be a REPLY, not another guess.
 - After that line finishes, listening starts again. Speak then. A real phrase still becomes a REPLY with the honest route tag.
 - `path=start` / `path=end` can already show `hfp=wired` when this happens. That only means the route is HFP. The REPLY card is the line that proves SpeechKit returned text.
 
@@ -271,7 +286,7 @@ That result is honest. The route was not HFP.
 - The STT row says `mic not granted`. Microphone or speech permission was denied, so there is no live line.
 - The header says `path mock`. `BOB_USE_MOCK_DEVICE=YES` does not select HFP.
 - You spoke while `Bob here. Listening.` was still playing. The mic opens after that line. Wait for it to end, then speak.
-- The only new card is `NO_FINAL`. SpeechKit returned no text. That prompt is not the missing REPLY. Speak again after you hear it. A REPLY card is still required for a successful turn.
+- The only new card is `NO_FINAL`. SpeechKit returned no text. That prompt is not the missing REPLY. Speak again after you hear it. A REPLY card is still required for a successful turn. Use `tap_peak` on that card to see whether the glasses mic produced samples.
 
 Camera stream stays off. Meta's "configure HFP before starting the camera stream" ordering applies when `addCamera` is used. This voice path does not call it.
 
