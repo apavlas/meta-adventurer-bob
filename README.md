@@ -1,1 +1,237 @@
 # meta-adventurer-bob
+
+iOS SwiftUI companion for **Meta Adventurer** AI glasses (variant **1H41**, self-branded Meta Glasses) talking to **Bob** (Chief of Staff).
+
+Two DAT paths, gated by `BOB_USE_MOCK_DEVICE`:
+
+| `BOB_USE_MOCK_DEVICE` | Boot |
+|---|---|
+| `NO` (committed default, device Run) | `Wearables.configure()` only. **Does not** call `MockDeviceKit.enable`. Registration goes through Meta AI. Session selects real `.metaGlasses`. |
+| `YES` (simulator / no glasses) | Today's mock path: `MockDeviceKit.enable(initiallyRegistered: true)`, pair `.metaGlasses`, no Meta AI hop. |
+
+Both paths:
+
+1. Device type stays **`.metaGlasses` / `META_GLASSES`** (Adventurer **1H41**). Not Ray-Ban Meta, not Display.
+2. DAT `DeviceSession` start / stop. Camera stream stays off (`addCamera` is not called).
+3. iOS CTA **Talk to Bob** starts the session.
+4. Phone-mic STT tagged `stt_source = phone_mic` until HFP exists (see below).
+5. `BobBridge` stub (default) or HTTPS `POST /v0/bob/turn` when configured.
+6. TTS / `spoken_line`.
+
+The word **mock** in the header means **MockDeviceKit is on**. It is not the device type. A real-path header reads `path real` and registration reads `registered` (not `mock` / `no Meta AI`). Round-trip lines include `device_path=real|mock` and `meta_ai=used|none`.
+
+BobCore tests run with `swift test`. This environment does not build the iOS app.
+
+## Open in Xcode
+
+Requires **Xcode 15+**, iOS **16+** deployment target.
+
+1. Clone this repo.
+2. Open `BobCompanion.xcworkspace` (or `Apps/BobCompanion/BobCompanion.xcodeproj`).
+3. Wait for Swift Package Manager to resolve:
+   - Local `BobCore` (this repo)
+   - [meta-wearables-dat-ios](https://github.com/facebook/meta-wearables-dat-ios) `0.8.x`
+4. Select the **BobCompanion** scheme and an iPhone simulator or device.
+5. Run. Grant **Microphone** and **Speech Recognition** when asked.
+
+SPM products linked on the app target:
+
+| Product | Why |
+|---|---|
+| `MWDATCore` | Register + `DeviceSession` |
+| `MWDATCamera` | Linked for later; **camera stays off** on voice v0 |
+| `MWDATMockDevice` | `MockDeviceKit` |
+| `BobCore` | BobBridge, spoken caps, golden lines, log types |
+
+DAT **0.9.0** raises the SDK minimum to iOS 17.2. This project pins **0.8.x** so the locked iOS 16+ target still links, while still using official `GlassesModel.metaGlasses` / `DeviceType.metaGlasses` (added in 0.8.0). Raise the deployment target before moving to 0.9.
+
+`Info.plist` includes:
+
+- `NSMicrophoneUsageDescription` / `NSSpeechRecognitionUsageDescription` (phone mic until HFP)
+- DAT URL scheme `bobcompanion://`, `MetaAppID = 0`, `com.meta.ar.wearable`
+- `BOB_USE_MOCK_DEVICE` from xcconfig (`NO` in git)
+- Bluetooth / external-accessory keys DAT expects
+
+## Mock vs real
+
+Committed default in `Apps/BobCompanion/Config/BobBridge.xcconfig`:
+
+```xcconfig
+BOB_USE_MOCK_DEVICE = NO
+```
+
+That value is copied into Info.plist as `$(BOB_USE_MOCK_DEVICE)`. On launch the app reads the process environment first, then Info.plist. Missing, blank, unexpanded `$(BOB_USE_MOCK_DEVICE)`, `NO`, or any token other than `YES` / `true` / `1` / `y` stays on the **real** path and does **not** call `MockDeviceKit.enable`.
+
+Override locally the same way as BobBridge (do not commit the local file):
+
+1. Xcode scheme → Run → Environment Variables: `BOB_USE_MOCK_DEVICE` = `YES` or `NO` (wins over the built plist).
+2. `Apps/BobCompanion/Config/BobBridge.local.xcconfig` (gitignored), included after the committed xcconfig from Debug and Release:
+
+```xcconfig
+BOB_USE_MOCK_DEVICE = YES
+```
+
+Use `YES` for simulator and no-hardware demos. Use `NO` on a phone that should talk to real Adventurer glasses.
+
+### Real path (device default)
+
+Prerequisites:
+
+- Meta AI app installed, and the Adventurer shows **Connected** there.
+- **Developer Mode** on (Meta AI → Settings → your glasses → Developer Mode). This build keeps `MetaAppID = 0`, so registration is the Developer Mode flow, not a production Wearables Developer Center app id.
+- Glasses are Meta Glasses / Adventurer 1H41 (`.metaGlasses`), not Ray-Ban Display.
+
+On launch, when the flag is NO:
+
+1. `Wearables.configure()` only. Console: `MockDeviceKit.enable not called`.
+2. If registration is not already `.registered`, `Wearables.shared.startRegistration()` opens Meta AI. The return URL is handled by the existing `onOpenURL` → `Wearables.shared.handleUrl`.
+3. Devices are filtered to `deviceType() == .metaGlasses`. Other types are logged and ignored.
+4. DAT 0.8 does not put a device in `devicesStream` until at least one permission is granted, and the only permission is camera. If the list is empty after registration, the app calls `requestPermission(.camera)` so the glasses can appear. It still does **not** call `addCamera` or start a camera stream.
+5. **Talk to Bob** creates a `DeviceSession` with `SpecificDeviceSelector` on that `.metaGlasses` id.
+
+UI: header `path real`, path row `real · Meta AI`, registration `registered` / `available` / `registering` / `unavailable`. Round-trip: `device_path=real`, `meta_ai=used` once registration is `.registered`, `stt_source=phone_mic`.
+
+Connecting the glasses in Meta AI cannot drop mock by itself. The flag has to be `NO`. If the header still says `path mock`, MockDeviceKit is on — change the flag and run again.
+
+### Mock path (`BOB_USE_MOCK_DEVICE=YES`)
+
+On launch the app:
+
+1. Calls `Wearables.configure()` (ignores `alreadyConfigured` if MockDeviceKit already did it).
+2. Calls `MockDeviceKit.shared.enable(config: MockDeviceKitConfig(initiallyRegistered: true, initialPermissionsGranted: true))`.
+3. Pairs **`.metaGlasses`**, then `powerOn()` / `unfold()` / `don()`.
+4. Treats registration as **already `.registered`** — label `registered (mock, no Meta AI)`. No Meta AI hop.
+
+Header includes the word **mock**. That word means MockDeviceKit, not `deviceType`. `deviceType` is still `META_GLASSES`. Round-trip: `device_path=mock`, `meta_ai=none`, `stt_source=phone_mic`.
+
+Then:
+
+1. Tap **Talk to Bob** (`Opens a hands-free session` sits under the button).
+2. App starts a DAT `DeviceSession` via `SpecificDeviceSelector` on the mock glasses (no `addCamera`).
+3. Speaks and logs: `Bob here. Listening.`
+4. Starts phone-mic `SFSpeechRecognizer`, tagged `phone_mic`.
+5. Injects a demo utterance (`What's next?`) so the first proof logs a complete round-trip without requiring you to speak.
+6. Stub Bob replies: `Next up is the 2pm with Sue.`
+7. Tap **End** → `Paused — say Bob when you’re back.`
+
+Golden-path demo buttons (session must be live):
+
+| Button | `spoken_line` | Extra |
+|---|---|---|
+| Reply | `Next up is the 2pm with Sue.` | — |
+| Desk | `Full note on desk.` | `desk_full` with the long note |
+| Fail | `Session cut — check the phone.` | one sentence |
+
+Watch **Xcode console** and the on-screen **Round-trip log**. Every line includes `device_path`, `deviceType=META_GLASSES`, `meta_ai`, `spoken_line` length / cap check, and `stt_source=phone_mic` on Bob turns. Real-path lines keep `stt_source=phone_mic` until HFP is wired.
+
+BobCore (no DAT, no simulator) can be checked from any Swift 5.9 host:
+
+```bash
+swift test
+```
+
+## What Gage verifies
+
+Real path (`BOB_USE_MOCK_DEVICE=NO`, physical Adventurer, Meta AI Connected, Developer Mode):
+
+- [ ] Launch does **not** log `MockDeviceKit.enabled`. Console includes `mock_kit=off` / `MockDeviceKit.enable not called`.
+- [ ] Header says `path real` and does not say mock. Registration does not say `mock` or `no Meta AI`.
+- [ ] Select `.metaGlasses` only — log `deviceType=META_GLASSES` (not Ray-Ban Meta, not Display).
+- [ ] After Meta AI registration, round-trip shows `device_path=real` and `meta_ai=used`.
+- [ ] `stt_source=phone_mic` and `hfp=not_wired` (HFP is still not the input route).
+- [ ] Camera stream off (no `addCamera`).
+
+Mock path (`BOB_USE_MOCK_DEVICE=YES`), in order:
+
+- [ ] Pair `.metaGlasses` — log `deviceType=META_GLASSES` (not Ray-Ban Meta, not Display)
+- [ ] DAT register / session — `MockDeviceKitConfig.initiallyRegistered = true` so state is `.registered` **without** Meta AI / Developer Mode (`meta_ai=none`, registration text includes mock)
+- [ ] iOS CTA only — **Talk to Bob** starts the session; no Hey Meta; no third-party wake
+- [ ] `stt_source=phone_mic` (not HFP) and `device_path=mock`
+- [ ] Camera off (voice v0 does not call `addCamera`)
+- [ ] One complete round-trip after mock pair + CTA: start line + stub reply
+- [ ] `spoken_line` length within caps (open ≤12 words; reply ≤2 sentences / ~35 words)
+
+## BobBridge contract
+
+Locked OpenAPI 3.0.3: [`docs/bobbridge-openapi.yaml`](docs/bobbridge-openapi.yaml).
+
+**HTTPS** `POST /v0/bob/turn` with Bearer auth.
+
+**Request JSON (required):** `session_id`, `utterance`, `stt_source` (`phone_mic` \| `hfp`)
+
+**200 JSON:** `spoken_line` (required), `desk_full` (string or null)
+
+**401 Unauthorized** and **503 CoS unavailable:** client speaks `Session cut — check the phone.`
+
+**Caps** (client enforces when applying a 200; server should too):
+
+- open ≤12 words
+- reply ≤2 sentences / ~35 words
+- longer desk answer → `spoken_line = Full note on desk.` + `desk_full`
+- end / fail = one sentence
+
+Default Bob is the local **stub** (`StubBobService`) so the mock demo works offline. `HttpsBobTransport` POSTs when `BOB_BRIDGE_MODE=remote` and both base URL and Bearer are set. **No production URL is committed.** WebSocket is deferred until barge-in.
+
+### Stub vs remote
+
+Resolution order: process environment, then `Info.plist` / xcconfig. Unexpanded `$(BOB_BRIDGE_*)` placeholders are ignored.
+
+| Key | Meaning |
+|---|---|
+| `BOB_BRIDGE_MODE` | `stub` (default) or `remote` |
+| `BOB_BRIDGE_BASE_URL` | Origin only — no live URL committed in this repo |
+| `BOB_BRIDGE_BEARER_TOKEN` | Bearer token. Never commit it. |
+
+If mode is `remote` but the URL or token is missing, the app **stays on stub** and logs why (`[BobBridge] … reason=…`).
+
+**xcconfig HTTPS trap:** In `.xcconfig`, `//` starts a comment. Writing `BOB_BRIDGE_BASE_URL = https://bob-bridge.fly.dev` silently truncates to `https:` (Bearer can still look fine while remote calls fail with RoundTrip `note=sessionCut`). Escape the double slash with an empty `$()` expansion:
+
+```xcconfig
+BOB_BRIDGE_BASE_URL = https:/$()/bob-bridge.fly.dev
+```
+
+Set them in any of:
+
+1. Xcode scheme Environment Variables (preferred for a token; plain `https://…` URLs are fine here)
+2. `Apps/BobCompanion/Config/BobBridge.local.xcconfig` (gitignored — never commit tokens), included from Debug/Release
+3. `Apps/BobCompanion/Config/BobBridge.xcconfig` placeholders (empty in git)
+
+```xcconfig
+BOB_BRIDGE_MODE = remote
+BOB_BRIDGE_BASE_URL = https:/$()/bob-bridge.fly.dev
+BOB_BRIDGE_BEARER_TOKEN = your-local-token
+```
+
+### Example curl
+
+```bash
+curl -sS -X POST "$BOB_BRIDGE_BASE_URL/v0/bob/turn" \
+  -H "Authorization: Bearer $BOB_BRIDGE_BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"session-demo","utterance":"What'\''s next?","stt_source":"phone_mic"}'
+```
+
+Expected 200:
+
+```json
+{"spoken_line":"Next up is the 2pm with Sue.","desk_full":null}
+```
+
+401 / 503 → companion speaks `Session cut — check the phone.`
+
+## HFP is still open
+
+Real DAT registration and `DeviceSession` are in this tree. Glasses **audio** is not.
+
+`PhoneMicRecognizer` still uses the iPhone microphone (`AVAudioSession` category `.playAndRecord` / `.measurement`, **without** `.allowBluetooth`). Both paths tag BobBridge `stt_source=phone_mic`. Round-trip and the STT row say `hfp=not_wired`. `meta_ai=used` on the real path means Meta AI registration, not that speech came from the glasses.
+
+Do not send `stt_source=hfp` until the capture input is the Adventurer SCO / HFP port. Wiring that route is a follow-up: set the HFP audio category only when it is safe, confirm the route, then tag `hfp`.
+
+## Out of scope
+
+- Bluetooth HFP / SCO capture (see above)
+- Android
+- Perfect Process / PerfectRouter
+- Custom wake word
+- Camera / Display experiences (`addCamera` stays off; camera permission is requested only so DAT 0.8 will list a device)
+- WebSocket BobBridge (deferred until barge-in)

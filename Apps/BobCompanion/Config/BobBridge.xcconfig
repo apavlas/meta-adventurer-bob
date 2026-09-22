@@ -1,0 +1,14 @@
+// BobBridge HTTPS. Leave blank in git. Override locally or via scheme env.
+// Do not commit tokens.
+// Local URL overrides: use https:/$()/host — bare https:// truncates (// is a comment).
+BOB_BRIDGE_MODE = stub
+BOB_BRIDGE_BASE_URL =
+BOB_BRIDGE_BEARER_TOKEN =
+
+// DAT path gate. Default NO so a device Run does not call MockDeviceKit.enable.
+// YES = simulator / no-hardware demo (MockDeviceKit, initiallyRegistered, no Meta AI).
+// NO = real DAT: Wearables.configure, Meta AI registration, .metaGlasses only.
+// Accepted YES tokens in the app: YES, true, 1, y. Anything else stays real.
+// Override in gitignored BobBridge.local.xcconfig (included after this file) or
+// with a scheme environment variable of the same name (env wins over Info.plist).
+BOB_USE_MOCK_DEVICE = NO

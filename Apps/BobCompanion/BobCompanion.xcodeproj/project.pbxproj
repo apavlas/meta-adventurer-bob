@@ -1,0 +1,392 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		28A87CAEE0CF4BBB9495BF2C /* BobCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0641D5EC3054B0C97F7F2A8 /* BobCompanionApp.swift */; };
+		E2CC866C4C0F4ED6A26961A0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31E7B14BC75841E4832724EF /* ContentView.swift */; };
+		2FAF8AFEB4204C8890DA7204 /* CompanionSessionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07AA0C9D9124762BECB8FC7 /* CompanionSessionController.swift */; };
+		277916401D1641C7BA47F53C /* MockDeviceBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14B6DB5E09345BEB6AA93B2 /* MockDeviceBootstrap.swift */; };
+		A7C3E91B4D2F4A0E8B6C1D20 /* WearableSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D4F02C5E304B1F9C7D2E31 /* WearableSession.swift */; };
+		C9E5013D6F415C209D8E3F42 /* DATRealWearableSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F6124E70526D31AE9F4053 /* DATRealWearableSession.swift */; };
+		82E7113B96CE4FFA94DEF6C4 /* PhoneMicRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B18535253934535A2C8C5B3 /* PhoneMicRecognizer.swift */; };
+		938D912CB6E84D3C95F2F3CE /* SpokenLineSpeaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */; };
+		50DF72E1745F4E09863247EA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7AFF21FC72DD4F66B0056D2A /* Assets.xcassets */; };
+		A4EAA50C14E9435AB63379DC /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D123878C485F42268D1A1025 /* Preview Assets.xcassets */; };
+		11223344556677889900AABB /* BobCore in Frameworks */ = {isa = PBXBuildFile; productRef = C3D4E5F647890123A4B5C6D7 /* BobCore */; };
+		223344556677889900AABBCC /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = D4E5F64789012345B6C7D8E9 /* MWDATCore */; };
+		3344556677889900AABBCCDD /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = E5F6478901234567C8D9E0F1 /* MWDATCamera */; };
+		44556677889900AABBCCDDEE /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = F647890123456789D0E1F2A3 /* MWDATMockDevice */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		75D95655EF7B459D88B2B786 /* Bob.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bob.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0641D5EC3054B0C97F7F2A8 /* BobCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BobCompanionApp.swift; sourceTree = "<group>"; };
+		31E7B14BC75841E4832724EF /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E502F423BA6C4D4185DB3083 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C07AA0C9D9124762BECB8FC7 /* CompanionSessionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSessionController.swift; sourceTree = "<group>"; };
+		F14B6DB5E09345BEB6AA93B2 /* MockDeviceBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDeviceBootstrap.swift; sourceTree = "<group>"; };
+		B8D4F02C5E304B1F9C7D2E31 /* WearableSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearableSession.swift; sourceTree = "<group>"; };
+		D0F6124E70526D31AE9F4053 /* DATRealWearableSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DATRealWearableSession.swift; sourceTree = "<group>"; };
+		3B18535253934535A2C8C5B3 /* PhoneMicRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneMicRecognizer.swift; sourceTree = "<group>"; };
+		DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpokenLineSpeaker.swift; sourceTree = "<group>"; };
+		7AFF21FC72DD4F66B0056D2A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D123878C485F42268D1A1025 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		61A0B0C0D0E0F00112233445 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		62A0B0C0D0E0F00112233446 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		63A0B0C0D0E0F00112233447 /* BobBridge.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BobBridge.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EE448FBEB7774939A8258A71 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				11223344556677889900AABB /* BobCore in Frameworks */,
+				223344556677889900AABBCC /* MWDATCore in Frameworks */,
+				3344556677889900AABBCCDD /* MWDATCamera in Frameworks */,
+				44556677889900AABBCCDDEE /* MWDATMockDevice in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E0ACC919E88445AF9D6FEF7F = {
+			isa = PBXGroup;
+			children = (
+				9B58ACD672FF4C73AC0FBB68 /* BobCompanion */,
+				64A0B0C0D0E0F00112233448 /* Config */,
+				5F0F84E80FAB433FA0D24CEA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5F0F84E80FAB433FA0D24CEA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				75D95655EF7B459D88B2B786 /* Bob.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9B58ACD672FF4C73AC0FBB68 /* BobCompanion */ = {
+			isa = PBXGroup;
+			children = (
+				F0641D5EC3054B0C97F7F2A8 /* BobCompanionApp.swift */,
+				31E7B14BC75841E4832724EF /* ContentView.swift */,
+				E502F423BA6C4D4185DB3083 /* Info.plist */,
+				7AFF21FC72DD4F66B0056D2A /* Assets.xcassets */,
+				5C48D910BE2D41AABC6215D9 /* Session */,
+				3E5EBFDA2E484A41B9D040A6 /* Preview Content */,
+			);
+			path = BobCompanion;
+			sourceTree = "<group>";
+		};
+		5C48D910BE2D41AABC6215D9 /* Session */ = {
+			isa = PBXGroup;
+			children = (
+				C07AA0C9D9124762BECB8FC7 /* CompanionSessionController.swift */,
+				B8D4F02C5E304B1F9C7D2E31 /* WearableSession.swift */,
+				F14B6DB5E09345BEB6AA93B2 /* MockDeviceBootstrap.swift */,
+				D0F6124E70526D31AE9F4053 /* DATRealWearableSession.swift */,
+				3B18535253934535A2C8C5B3 /* PhoneMicRecognizer.swift */,
+				DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */,
+			);
+			path = Session;
+			sourceTree = "<group>";
+		};
+		64A0B0C0D0E0F00112233448 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				63A0B0C0D0E0F00112233447 /* BobBridge.xcconfig */,
+				61A0B0C0D0E0F00112233445 /* Debug.xcconfig */,
+				62A0B0C0D0E0F00112233446 /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		3E5EBFDA2E484A41B9D040A6 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				D123878C485F42268D1A1025 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CAA8BB310D89485FA7DD96DF /* BobCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C96061DF56EF4E979CCE3AD3 /* Build configuration list for PBXNativeTarget "BobCompanion" */;
+			buildPhases = (
+				0F243CD6E86B4575B91037D5 /* Sources */,
+				EE448FBEB7774939A8258A71 /* Frameworks */,
+				7F0B35979D104D679A23D7DA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BobCompanion;
+			packageProductDependencies = (
+				C3D4E5F647890123A4B5C6D7 /* BobCore */,
+				D4E5F64789012345B6C7D8E9 /* MWDATCore */,
+				E5F6478901234567C8D9E0F1 /* MWDATCamera */,
+				F647890123456789D0E1F2A3 /* MWDATMockDevice */,
+			);
+			productName = BobCompanion;
+			productReference = 75D95655EF7B459D88B2B786 /* Bob.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		779BE92E6E4844028C385EE6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					CAA8BB310D89485FA7DD96DF = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 00FE288F25F841429650C98D /* Build configuration list for PBXProject "BobCompanion" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E0ACC919E88445AF9D6FEF7F;
+			packageReferences = (
+				A1B2C3D4E5F64789A0B1C2D3 /* XCLocalSwiftPackageReference "../../" */,
+				B2C3D4E5F6478901A2B3C4D5 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */,
+			);
+			productRefGroup = 5F0F84E80FAB433FA0D24CEA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CAA8BB310D89485FA7DD96DF /* BobCompanion */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7F0B35979D104D679A23D7DA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				50DF72E1745F4E09863247EA /* Assets.xcassets in Resources */,
+				A4EAA50C14E9435AB63379DC /* Preview Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0F243CD6E86B4575B91037D5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28A87CAEE0CF4BBB9495BF2C /* BobCompanionApp.swift in Sources */,
+				E2CC866C4C0F4ED6A26961A0 /* ContentView.swift in Sources */,
+				2FAF8AFEB4204C8890DA7204 /* CompanionSessionController.swift in Sources */,
+				277916401D1641C7BA47F53C /* MockDeviceBootstrap.swift in Sources */,
+				A7C3E91B4D2F4A0E8B6C1D20 /* WearableSession.swift in Sources */,
+				C9E5013D6F415C209D8E3F42 /* DATRealWearableSession.swift in Sources */,
+				82E7113B96CE4FFA94DEF6C4 /* PhoneMicRecognizer.swift in Sources */,
+				938D912CB6E84D3C95F2F3CE /* SpokenLineSpeaker.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		C6D2937863BD4F438E5E93FC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		9ADFBB1B74B34207BFFF721D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		692B90C131864FBB816D4C0D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 61A0B0C0D0E0F00112233445 /* Debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"BobCompanion/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BobCompanion/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Bob;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bob listens on this iPhone microphone and tags stt_source = phone_mic until glasses HFP audio is wired.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Bob turns what you say on this iPhone into text, tags it phone_mic, and sends it to BobBridge.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.apavlas.BobCompanion;
+				PRODUCT_NAME = Bob;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		0D2F7AE6A3804D8CBBF72537 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 62A0B0C0D0E0F00112233446 /* Release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"BobCompanion/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BobCompanion/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Bob;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bob listens on this iPhone microphone and tags stt_source = phone_mic until glasses HFP audio is wired.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Bob turns what you say on this iPhone into text, tags it phone_mic, and sends it to BobBridge.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.apavlas.BobCompanion;
+				PRODUCT_NAME = Bob;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00FE288F25F841429650C98D /* Build configuration list for PBXProject "BobCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C6D2937863BD4F438E5E93FC /* Debug */,
+				9ADFBB1B74B34207BFFF721D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C96061DF56EF4E979CCE3AD3 /* Build configuration list for PBXNativeTarget "BobCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				692B90C131864FBB816D4C0D /* Debug */,
+				0D2F7AE6A3804D8CBBF72537 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A1B2C3D4E5F64789A0B1C2D3 /* XCLocalSwiftPackageReference "../../" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B2C3D4E5F6478901A2B3C4D5 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/meta-wearables-dat-ios";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C3D4E5F647890123A4B5C6D7 /* BobCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D4E5F64789A0B1C2D3 /* XCLocalSwiftPackageReference "../../" */;
+			productName = BobCore;
+		};
+		D4E5F64789012345B6C7D8E9 /* MWDATCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B2C3D4E5F6478901A2B3C4D5 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCore;
+		};
+		E5F6478901234567C8D9E0F1 /* MWDATCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B2C3D4E5F6478901A2B3C4D5 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCamera;
+		};
+		F647890123456789D0E1F2A3 /* MWDATMockDevice */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B2C3D4E5F6478901A2B3C4D5 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATMockDevice;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 779BE92E6E4844028C385EE6 /* Project object */;
+}
