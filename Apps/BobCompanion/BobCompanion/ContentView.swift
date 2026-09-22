@@ -98,7 +98,7 @@ struct ContentView: View {
                 .font(.headline)
             Text(session.usesMockDevice
                 ? "Talk to Bob logs start plus a demo phone_mic utterance. These buttons inject more."
-                : "Talk to Bob starts a real DAT session. STT stays phone_mic until HFP is wired. These buttons inject phone_mic utterances.")
+                : "Talk to Bob starts a real DAT session. Live speech is tagged hfp only when the input route is Bluetooth HFP. These buttons inject phone_mic text.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             HStack {
@@ -116,7 +116,7 @@ struct ContentView: View {
             if session.log.entries.isEmpty {
                 Text(session.usesMockDevice
                     ? "Pair, then tap Talk to Bob. Console and this list should show device_path=mock, deviceType=META_GLASSES, meta_ai=none, stt_source=phone_mic."
-                    : "With Meta AI Connected, tap Talk to Bob. Log shows device_path=real, deviceType=META_GLASSES, meta_ai=used, stt_source=phone_mic (HFP not wired).")
+                    : "With Adventurer Connected, tap Talk to Bob and speak. If the glasses mic is the input, the log shows stt_source=hfp and hfp=wired. If the iPhone mic is still selected, it stays stt_source=phone_mic and hfp=not_wired.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {

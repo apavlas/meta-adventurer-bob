@@ -1,8 +1,8 @@
 import Foundation
 
 /// Microphone source tagged on every BobBridge request.
-/// Mock and real DAT both use `phone_mic` until glasses HFP / SCO capture exists.
-/// Do not send `hfp` until that route is actually the input.
+/// `hfp` is sent only when the active input route is Bluetooth HFP/SCO
+/// or a clear glasses hands-free port. Otherwise the tag stays `phone_mic`.
 public enum STTSource: String, Codable, Sendable, CaseIterable {
     case phoneMic = "phone_mic"
     case hfp = "hfp"

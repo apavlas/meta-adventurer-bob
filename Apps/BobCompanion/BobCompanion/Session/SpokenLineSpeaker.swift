@@ -4,6 +4,11 @@ import Foundation
 @MainActor
 final class SpokenLineSpeaker {
     private let synthesizer = AVSpeechSynthesizer()
+    private let audioSession: GlassesAudioSession
+
+    init(audioSession: GlassesAudioSession) {
+        self.audioSession = audioSession
+    }
 
     func speak(_ line: String) {
         prepareSession()
@@ -19,8 +24,10 @@ final class SpokenLineSpeaker {
     }
 
     private func prepareSession() {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker])
-        try? session.setActive(true, options: .notifyOthersOnDeactivation)
+        do {
+            try audioSession.configurePlayback()
+        } catch {
+            print("[Audio] playback session failed \(error.localizedDescription)")
+        }
     }
 }

@@ -39,11 +39,11 @@
 		</dict>
 	</dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Bob needs Bluetooth to reach Meta Adventurer glasses when a real device is paired later.</string>
+	<string>Bob uses Bluetooth so Meta Adventurer can be the hands-free microphone when the glasses are Connected.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Bob listens on this iPhone microphone and tags stt_source = phone_mic until glasses HFP audio is wired.</string>
+	<string>Bob uses the microphone for Talk to Bob. Glasses Bluetooth hands-free audio is tagged hfp. This iPhone microphone is tagged phone_mic.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Bob turns what you say on this iPhone into text, tags it phone_mic, and sends it to BobBridge.</string>
+	<string>Bob turns speech into text for BobBridge. Glasses Bluetooth hands-free audio is tagged hfp. The iPhone microphone is tagged phone_mic.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Needed for Meta Wearables DAT device discovery on the local network.</string>
 	<key>NSBonjourServices</key>

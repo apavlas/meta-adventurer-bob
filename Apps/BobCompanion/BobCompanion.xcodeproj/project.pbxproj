@@ -14,6 +14,7 @@
 		A7C3E91B4D2F4A0E8B6C1D20 /* WearableSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D4F02C5E304B1F9C7D2E31 /* WearableSession.swift */; };
 		C9E5013D6F415C209D8E3F42 /* DATRealWearableSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F6124E70526D31AE9F4053 /* DATRealWearableSession.swift */; };
 		82E7113B96CE4FFA94DEF6C4 /* PhoneMicRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B18535253934535A2C8C5B3 /* PhoneMicRecognizer.swift */; };
+		B7E4A1C09D2F4E6A8C1B3D51 /* GlassesAudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E4A1C09D2F4E6A8C1B3D50 /* GlassesAudioSession.swift */; };
 		938D912CB6E84D3C95F2F3CE /* SpokenLineSpeaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */; };
 		50DF72E1745F4E09863247EA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7AFF21FC72DD4F66B0056D2A /* Assets.xcassets */; };
 		A4EAA50C14E9435AB63379DC /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D123878C485F42268D1A1025 /* Preview Assets.xcassets */; };
@@ -33,6 +34,7 @@
 		B8D4F02C5E304B1F9C7D2E31 /* WearableSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearableSession.swift; sourceTree = "<group>"; };
 		D0F6124E70526D31AE9F4053 /* DATRealWearableSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DATRealWearableSession.swift; sourceTree = "<group>"; };
 		3B18535253934535A2C8C5B3 /* PhoneMicRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneMicRecognizer.swift; sourceTree = "<group>"; };
+		B7E4A1C09D2F4E6A8C1B3D50 /* GlassesAudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesAudioSession.swift; sourceTree = "<group>"; };
 		DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpokenLineSpeaker.swift; sourceTree = "<group>"; };
 		7AFF21FC72DD4F66B0056D2A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D123878C485F42268D1A1025 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -93,6 +95,7 @@
 				B8D4F02C5E304B1F9C7D2E31 /* WearableSession.swift */,
 				F14B6DB5E09345BEB6AA93B2 /* MockDeviceBootstrap.swift */,
 				D0F6124E70526D31AE9F4053 /* DATRealWearableSession.swift */,
+				B7E4A1C09D2F4E6A8C1B3D50 /* GlassesAudioSession.swift */,
 				3B18535253934535A2C8C5B3 /* PhoneMicRecognizer.swift */,
 				DFAE94A795CC47B2A9D0EA13 /* SpokenLineSpeaker.swift */,
 			);
@@ -203,6 +206,7 @@
 				277916401D1641C7BA47F53C /* MockDeviceBootstrap.swift in Sources */,
 				A7C3E91B4D2F4A0E8B6C1D20 /* WearableSession.swift in Sources */,
 				C9E5013D6F415C209D8E3F42 /* DATRealWearableSession.swift in Sources */,
+				B7E4A1C09D2F4E6A8C1B3D51 /* GlassesAudioSession.swift in Sources */,
 				82E7113B96CE4FFA94DEF6C4 /* PhoneMicRecognizer.swift in Sources */,
 				938D912CB6E84D3C95F2F3CE /* SpokenLineSpeaker.swift in Sources */,
 			);
@@ -268,8 +272,8 @@
 				INFOPLIST_FILE = BobCompanion/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Bob;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bob listens on this iPhone microphone and tags stt_source = phone_mic until glasses HFP audio is wired.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Bob turns what you say on this iPhone into text, tags it phone_mic, and sends it to BobBridge.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bob uses the microphone for Talk to Bob. Glasses Bluetooth hands-free audio is tagged hfp. This iPhone microphone is tagged phone_mic.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Bob turns speech into text for BobBridge. Glasses Bluetooth hands-free audio is tagged hfp. The iPhone microphone is tagged phone_mic.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -303,8 +307,8 @@
 				INFOPLIST_FILE = BobCompanion/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Bob;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bob listens on this iPhone microphone and tags stt_source = phone_mic until glasses HFP audio is wired.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Bob turns what you say on this iPhone into text, tags it phone_mic, and sends it to BobBridge.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Bob uses the microphone for Talk to Bob. Glasses Bluetooth hands-free audio is tagged hfp. This iPhone microphone is tagged phone_mic.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Bob turns speech into text for BobBridge. Glasses Bluetooth hands-free audio is tagged hfp. The iPhone microphone is tagged phone_mic.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
