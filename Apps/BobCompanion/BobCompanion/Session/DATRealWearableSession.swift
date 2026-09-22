@@ -8,8 +8,8 @@ import MWDATCore
 /// Real DAT path: `Wearables.configure` (done at launch), Meta AI registration, then a
 /// `DeviceSession` on `.metaGlasses` only. This type never imports or calls MockDeviceKit.
 ///
-/// Audio stays on the phone mic. HFP / SCO capture is not wired; callers must keep
-/// `stt_source = phone_mic` until the input route is actually the glasses hands-free port.
+/// Audio capture is not a DAT API. The companion tags `stt_source` from the iOS input
+/// route after this session starts: `hfp` only when that route is Bluetooth HFP/SCO.
 @MainActor
 final class DATRealWearableSession: WearableSessionControlling {
     private(set) var registration = "unknown"
@@ -145,7 +145,7 @@ final class DATRealWearableSession: WearableSessionControlling {
         // Voice v0: do not call addCamera. Camera permission may be requested only so DAT lists the device.
         sessionState = "started"
         publish()
-        print("[DAT] DeviceSession.started session_id=\(id) camera=off device_path=real deviceType=\(HardwareContext.deviceTypeLogValue) stt_source=phone_mic hfp=not_wired")
+        print("[DAT] DeviceSession.started session_id=\(id) camera=off device_path=real deviceType=\(HardwareContext.deviceTypeLogValue)")
         return id
         #else
         throw WearableSessionError.datUnavailable
@@ -279,7 +279,6 @@ final class DATRealWearableSession: WearableSessionControlling {
         if !permissionNote.isEmpty {
             note += " · \(permissionNote)"
         }
-        note += " · stt_source=phone_mic · hfp=not_wired"
         return PairedGlasses(
             deviceType: HardwareContext.deviceTypeLogValue,
             glassesModel: HardwareContext.glassesModelSymbol,

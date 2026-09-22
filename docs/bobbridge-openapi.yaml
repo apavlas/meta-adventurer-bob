@@ -5,9 +5,11 @@ info:
   description: |
     Locked v0 HTTPS contract for the iOS companion talking to Bob (Chief of Staff).
 
-    `POST /v0/bob/turn` with Bearer auth. The client always tags `stt_source`
-    (`phone_mic` today; `hfp` later) and applies spoken caps when it plays the
-    response. The server should apply the same caps.
+    `POST /v0/bob/turn` with Bearer auth. The client tags `stt_source`
+    `phone_mic` when the iPhone microphone is the input, and `hfp` only when
+    the active input route is Bluetooth HFP/SCO (or a clear glasses hands-free
+    port). It applies spoken caps when it plays the response. The server
+    should apply the same caps.
 
     Spoken caps:
     - open ≤12 words
@@ -51,6 +53,12 @@ paths:
                   session_id: 'session-demo'
                   utterance: What's next?
                   stt_source: phone_mic
+              hfp:
+                summary: Glasses hands-free input is the active route
+                value:
+                  session_id: 'session-demo'
+                  utterance: What's next?
+                  stt_source: hfp
       responses:
         '200':
           description: Turn completed. Client enforces spoken caps before TTS.

@@ -14,7 +14,7 @@ Both paths:
 1. Device type stays **`.metaGlasses` / `META_GLASSES`** (Adventurer **1H41**). Not Ray-Ban Meta, not Display.
 2. DAT `DeviceSession` start / stop. Camera stream stays off (`addCamera` is not called).
 3. iOS CTA **Talk to Bob** starts the session.
-4. Phone-mic STT tagged `stt_source = phone_mic` until HFP exists (see below).
+4. Real path allows Bluetooth HFP and tags `stt_source=hfp` only when that input route is active. Otherwise, and on the mock path, STT stays `phone_mic`.
 5. `BobBridge` stub (default) or HTTPS `POST /v0/bob/turn` when configured.
 6. TTS / `spoken_line`.
 
@@ -47,7 +47,7 @@ DAT **0.9.0** raises the SDK minimum to iOS 17.2. This project pins **0.8.x** so
 
 `Info.plist` includes:
 
-- `NSMicrophoneUsageDescription` / `NSSpeechRecognitionUsageDescription` (phone mic until HFP)
+- `NSMicrophoneUsageDescription` / `NSSpeechRecognitionUsageDescription` (phone mic, or glasses HFP when that route is active)
 - DAT URL scheme `bobcompanion://`, `MetaAppID = 0`, `com.meta.ar.wearable`
 - `BOB_USE_MOCK_DEVICE` from xcconfig (`NO` in git)
 - Bluetooth / external-accessory keys DAT expects
@@ -89,7 +89,7 @@ On launch, when the flag is NO:
 4. DAT 0.8 does not put a device in `devicesStream` until at least one permission is granted, and the only permission is camera. If the list is empty after registration, the app calls `requestPermission(.camera)` so the glasses can appear. It still does **not** call `addCamera` or start a camera stream.
 5. **Talk to Bob** creates a `DeviceSession` with `SpecificDeviceSelector` on that `.metaGlasses` id.
 
-UI: header `path real`, path row `real · Meta AI`, registration `registered` / `available` / `registering` / `unavailable`. Round-trip: `device_path=real`, `meta_ai=used` once registration is `.registered`, `stt_source=phone_mic`.
+UI: header `path real`, path row `real · Meta AI`, registration `registered` / `available` / `registering` / `unavailable`. Round-trip: `device_path=real`, `meta_ai=used` once registration is `.registered`. Live speech is `stt_source=hfp` when the input route is Bluetooth HFP, and `stt_source=phone_mic` when it is not. See [Glasses microphone](#glasses-microphone-bluetooth-hfp).
 
 Connecting the glasses in Meta AI cannot drop mock by itself. The flag has to be `NO`. If the header still says `path mock`, MockDeviceKit is on — change the flag and run again.
 
@@ -109,7 +109,7 @@ Then:
 1. Tap **Talk to Bob** (`Opens a hands-free session` sits under the button).
 2. App starts a DAT `DeviceSession` via `SpecificDeviceSelector` on the mock glasses (no `addCamera`).
 3. Speaks and logs: `Bob here. Listening.`
-4. Starts phone-mic `SFSpeechRecognizer`, tagged `phone_mic`.
+4. Starts `SFSpeechRecognizer` on the iPhone microphone, tagged `phone_mic` (HFP is not enabled on this path).
 5. Injects a demo utterance (`What's next?`) so the first proof logs a complete round-trip without requiring you to speak.
 6. Stub Bob replies: `Next up is the 2pm with Sue.`
 7. Tap **End** → `Paused — say Bob when you’re back.`
@@ -122,7 +122,7 @@ Golden-path demo buttons (session must be live):
 | Desk | `Full note on desk.` | `desk_full` with the long note |
 | Fail | `Session cut — check the phone.` | one sentence |
 
-Watch **Xcode console** and the on-screen **Round-trip log**. Every line includes `device_path`, `deviceType=META_GLASSES`, `meta_ai`, `spoken_line` length / cap check, and `stt_source=phone_mic` on Bob turns. Real-path lines keep `stt_source=phone_mic` until HFP is wired.
+Watch **Xcode console** and the on-screen **Round-trip log**. Every line includes `device_path`, `deviceType=META_GLASSES`, `meta_ai`, and `spoken_line` length / cap check. Bob turns include `stt_source`. On the real path that is `hfp` only when the input route is HFP (`hfp=wired` plus `audio_route=`). Otherwise it stays `phone_mic` and `hfp=not_wired`. The mock path stays `phone_mic`.
 
 BobCore (no DAT, no simulator) can be checked from any Swift 5.9 host:
 
@@ -138,7 +138,7 @@ Real path (`BOB_USE_MOCK_DEVICE=NO`, physical Adventurer, Meta AI Connected, Dev
 - [ ] Header says `path real` and does not say mock. Registration does not say `mock` or `no Meta AI`.
 - [ ] Select `.metaGlasses` only — log `deviceType=META_GLASSES` (not Ray-Ban Meta, not Display).
 - [ ] After Meta AI registration, round-trip shows `device_path=real` and `meta_ai=used`.
-- [ ] `stt_source=phone_mic` and `hfp=not_wired` (HFP is still not the input route).
+- [ ] Speak after **Talk to Bob**. If the glasses mic is the input, the reply line shows `stt_source=hfp`, `hfp=wired`, and `audio_route=BluetoothHFP:<glasses name>`. If the iPhone mic is still selected, the same line stays `stt_source=phone_mic` and `hfp=not_wired`. Do not expect `hfp` until `audio_route` shows that hands-free port.
 - [ ] Camera stream off (no `addCamera`).
 
 Mock path (`BOB_USE_MOCK_DEVICE=YES`), in order:
@@ -219,17 +219,48 @@ Expected 200:
 
 401 / 503 → companion speaks `Session cut — check the phone.`
 
-## HFP is still open
+## Glasses microphone (Bluetooth HFP)
 
-Real DAT registration and `DeviceSession` are in this tree. Glasses **audio** is not.
+DAT does not capture the glasses microphone. Meta's microphone guidance is the phone Bluetooth stack: category `.playAndRecord`, the HFP option, then `setPreferredInput` on the `BluetoothHFP` port. Confirm `currentRoute.inputs` before calling it the glasses mic. A2DP is output-only and does not provide a microphone. HFP and A2DP are mutually exclusive; while HFP is up, playback on that link is 8 kHz mono.
 
-`PhoneMicRecognizer` still uses the iPhone microphone (`AVAudioSession` category `.playAndRecord` / `.measurement`, **without** `.allowBluetooth`). Both paths tag BobBridge `stt_source=phone_mic`. Round-trip and the STT row say `hfp=not_wired`. `meta_ai=used` on the real path means Meta AI registration, not that speech came from the glasses.
+On the real path (`BOB_USE_MOCK_DEVICE=NO`) Bob uses mode `.voiceChat` with `.allowBluetooth` (the iOS 16 name for `.allowBluetoothHFP`). It does **not** set `.allowBluetoothA2DP` or `.defaultToSpeaker`. Those options keep the phone speaker and leave the input on the iPhone microphone. The session prefers an HFP port whose name looks like the glasses when more than one hands-free device is connected, then reads the route again when a phrase is finalized.
 
-Do not send `stt_source=hfp` until the capture input is the Adventurer SCO / HFP port. Wiring that route is a follow-up: set the HFP audio category only when it is safe, confirm the route, then tag `hfp`.
+`stt_source=hfp` is sent only when that **current input** is Bluetooth HFP/SCO, or a port that is clearly the glasses hands-free input. The built-in mic, a wired headset, A2DP, and Bluetooth LE with no hands-free marker stay `phone_mic`. The tag is never forced. The mock path does not enable HFP and always tags `phone_mic`.
+
+| Input route | BobBridge tag | Round-trip |
+|---|---|---|
+| Bluetooth HFP/SCO, or a clear glasses hands-free port | `stt_source=hfp` | `hfp=wired` and `audio_route=<port type>:<port name>` |
+| iPhone mic, wired headset, A2DP-only, or no input | `stt_source=phone_mic` | `hfp=not_wired` and `audio_route=` when a port was read |
+
+`audio_route` uses `_` instead of spaces. The same line is printed as `[Audio]` in the Xcode console, plus `available_inputs=` and `preferred_input=` when the real path configures the session.
+
+### Verify HFP
+
+On a phone with `BOB_USE_MOCK_DEVICE=NO` (the committed default):
+
+1. Meta AI shows the Adventurer **Connected**. Developer Mode is on. This build keeps `MetaAppID = 0`.
+2. Run Bob. The header says `path real`. Registration reaches `registered`.
+3. Tap **Talk to Bob**.
+4. After `Bob here. Listening.`, speak a short phrase.
+5. The reply round-trip should include `device_path=real`, `meta_ai=used`, `stt_source=hfp`, `hfp=wired`, and `audio_route=BluetoothHFP:<glasses name>`.
+
+Golden-path demo buttons inject text. Those lines stay `stt_source=phone_mic` because they were not captured from the route.
+
+### If it stays `phone_mic`
+
+That result is honest. The route was not HFP.
+
+- Meta AI does not show the Adventurer as **Connected**, or registration is not `registered`. No HFP input will appear.
+- `audio_route` is `MicrophoneBuiltIn:...`. iOS kept the phone mic. Media audio can still play on the glasses over A2DP while the mic stays on the phone; that is still `phone_mic`.
+- `audio_route` names a different headset. The tag is `hfp` whenever that HFP port is the input, and the route name shows which device. Disconnect the other hands-free device, or confirm Adventurer is the Bluetooth input, and speak again.
+- `audio_route` is Bluetooth LE only, with no hands-free / HFP port. Discovery is not the glasses mic.
+- The STT row says `mic not granted`. Microphone or speech permission was denied, so there is no live line.
+- The header says `path mock`. `BOB_USE_MOCK_DEVICE=YES` does not select HFP.
+
+Camera stream stays off. Meta's "configure HFP before starting the camera stream" ordering applies when `addCamera` is used. This voice path does not call it.
 
 ## Out of scope
 
-- Bluetooth HFP / SCO capture (see above)
 - Android
 - Perfect Process / PerfectRouter
 - Custom wake word

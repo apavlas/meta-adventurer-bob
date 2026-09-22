@@ -27,6 +27,8 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
     public var deskFull: String?
     public var metaAIUsed: Bool
     public var devicePath: DevicePathKind
+    public var hfpState: HFPRouteState?
+    public var audioRoute: String?
     public var note: String
 
     public init(
@@ -41,6 +43,8 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
         deskFull: String? = nil,
         metaAIUsed: Bool = false,
         devicePath: DevicePathKind = .real,
+        hfpState: HFPRouteState? = nil,
+        audioRoute: String? = nil,
         note: String = ""
     ) {
         self.id = id
@@ -54,6 +58,8 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
         self.deskFull = deskFull
         self.metaAIUsed = metaAIUsed
         self.devicePath = devicePath
+        self.hfpState = hfpState
+        self.audioRoute = audioRoute
         self.note = note
     }
 
@@ -73,6 +79,12 @@ public struct RoundTripEntry: Identifiable, Equatable, Sendable {
         ]
         if let sttSource {
             fields.append("stt_source=\(sttSource.rawValue)")
+        }
+        if let hfpState {
+            fields.append("hfp=\(hfpState.rawValue)")
+        }
+        if let audioRoute, !audioRoute.isEmpty, audioRoute != "none" {
+            fields.append("audio_route=\(audioRoute)")
         }
         if let sttCapture {
             fields.append("stt_capture=\(sttCapture.rawValue)")
