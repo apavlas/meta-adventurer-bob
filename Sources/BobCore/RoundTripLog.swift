@@ -6,6 +6,8 @@ public enum GoldenPath: String, Codable, Sendable {
     case overBudget = "over_budget"
     case fail
     case end
+    /// SpeechKit produced no final. The spoken line is a prompt, not a Bob reply.
+    case noFinal = "no_final"
 }
 
 public enum STTCapture: String, Codable, Sendable {

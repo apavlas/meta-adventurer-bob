@@ -34,6 +34,8 @@ final class CompanionSessionController: ObservableObject {
     private let speaker: SpokenLineSpeaker
     private var bob: any BobServing
     private var sessionId: String?
+    /// Bumps when a listen window is replaced so a late no-final prompt cannot speak.
+    private var listenGeneration = 0
 
     init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -140,6 +142,8 @@ final class CompanionSessionController: ObservableObject {
                 }
             }
             status = listeningStatus
+            // Finish the open line before capture starts. The recognizer must not
+            // hear "Bob here. Listening." and must not share the session with TTS.
             await speakAndLog(
                 path: .start,
                 role: .open,
@@ -151,17 +155,17 @@ final class CompanionSessionController: ObservableObject {
                 audioRoute: measuredRoute.audioRoute,
                 note: "CTA \(LexCopy.talkToBob)"
             )
+            guard phase == .listening else { return }
 
             if liveSTTAvailable {
                 do {
-                    try await recognizer.start { [weak self] text, decision in
-                        Task { await self?.handleUtterance(text, capture: .live, route: decision) }
-                    }
+                    try await startLiveRecognition()
                 } catch {
                     liveSTTAvailable = false
                     print("[Audio] recognizer start failed \(error.localizedDescription)")
                 }
             }
+            guard phase == .listening else { return }
             if !usesMockDevice {
                 applyInputDecision(audioSession.currentDecision())
             }
@@ -186,6 +190,7 @@ final class CompanionSessionController: ObservableObject {
     }
 
     func endSession() async {
+        listenGeneration += 1
         recognizer.stop()
         audioSession.stopObserving()
         wearable.stopDeviceSession()
@@ -266,10 +271,73 @@ final class CompanionSessionController: ObservableObject {
         }
     }
 
+    /// Capture starts after the open line. A missing SpeechKit final speaks the
+    /// retry line (not an hfp reply) and listens again.
+    private func startLiveRecognition() async throws {
+        listenGeneration += 1
+        let generation = listenGeneration
+        try await recognizer.start(
+            onFinalUtterance: { [weak self] text, decision in
+                Task { @MainActor in
+                    await self?.handleUtterance(text, capture: .live, route: decision)
+                }
+            },
+            onNoFinal: usesMockDevice ? nil : { [weak self] in
+                Task { @MainActor in
+                    await self?.handleNoFinal(generation: generation)
+                }
+            }
+        )
+    }
+
+    private func handleNoFinal(generation: Int) async {
+        guard generation == listenGeneration else { return }
+        guard !usesMockDevice else { return }
+        guard phase == .listening, sessionId != nil else { return }
+        listenGeneration += 1
+        recognizer.stop()
+        let note = LiveListenPolicy.noFinalLogNote(routeToken: inputDecision.loggedRoute)
+        print("[Audio] \(note) action=retry_prompt")
+        await speakAndLog(
+            path: .noFinal,
+            role: .retry,
+            line: GoldenSpokenLine.noFinal,
+            sessionId: sessionId,
+            sttSource: nil,
+            sttCapture: nil,
+            hfpState: nil,
+            audioRoute: nil,
+            note: note
+        )
+        guard phase == .listening, sessionId != nil else { return }
+        do {
+            try await startLiveRecognition()
+        } catch {
+            print("[Audio] restart after no_final failed \(error.localizedDescription)")
+        }
+        if phase == .listening {
+            status = listeningStatus
+        }
+    }
+
     private func handleUtterance(_ text: String, capture: STTCapture, route: AudioInputDecision? = nil) async {
+        listenGeneration += 1
+        recognizer.stop()
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         guard let sessionId else { return }
+        guard capture != .live || !LiveListenPolicy.isOwnSpokenEcho(trimmed) else {
+            print("[Audio] ignored echo chars=\(trimmed.count)")
+            phase = .listening
+            status = listeningStatus
+            guard !usesMockDevice, liveSTTAvailable else { return }
+            do {
+                try await startLiveRecognition()
+            } catch {
+                print("[Audio] restart after echo failed \(error.localizedDescription)")
+            }
+            return
+        }
 
         lastUtterance = trimmed
         phase = .thinking
@@ -344,7 +412,6 @@ final class CompanionSessionController: ObservableObject {
         note: String
     ) async {
         lastSpoken = line
-        speaker.speak(line)
         let entry = RoundTripEntry(
             path: path,
             deviceType: HardwareContext.deviceTypeLogValue,
@@ -361,6 +428,7 @@ final class CompanionSessionController: ObservableObject {
             note: note
         )
         log.append(entry)
+        await speaker.speak(line)
     }
 
     private func speakAndLogFail(

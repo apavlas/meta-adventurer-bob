@@ -10,6 +10,8 @@ public enum SpokenRole: String, Codable, Sendable {
     case end
     /// Session / bridge failure. Cap: one sentence.
     case fail
+    /// Open-ear prompt when live STT produced no final. Cap: one sentence, ≤12 words.
+    case retry
 }
 
 public enum SpokenCaps: Sendable {
@@ -39,6 +41,9 @@ public enum SpokenCaps: Sendable {
                 && sentenceCount(spokenLine) <= replyMaxSentences
         case .end, .fail:
             return sentenceCount(spokenLine) <= 1
+        case .retry:
+            return sentenceCount(spokenLine) <= 1
+                && wordCount(spokenLine) <= openMaxWords
         }
     }
 
