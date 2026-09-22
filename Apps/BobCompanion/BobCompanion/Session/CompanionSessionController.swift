@@ -14,7 +14,7 @@ final class CompanionSessionController: ObservableObject {
     }
 
     @Published var phase: Phase = .idle
-    @Published var status = "Mock pair not started"
+    @Published var status = "Real DAT not started"
     @Published var registration = "unknown"
     @Published var sessionState = "idle"
     @Published var lastSpoken = ""
@@ -24,7 +24,10 @@ final class CompanionSessionController: ObservableObject {
     @Published var bridgeMode = "stub"
     @Published var bridgeStatus = "stub (default)"
 
-    private let wearable = DATMockWearableSession()
+    let usesMockDevice: Bool
+    let devicePath: DevicePathKind
+
+    private let wearable: any WearableSessionControlling
     private let recognizer = PhoneMicRecognizer()
     private let speaker = SpokenLineSpeaker()
     private var bob: any BobServing
@@ -34,6 +37,15 @@ final class CompanionSessionController: ObservableObject {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         infoDictionary: [String: Any] = Bundle.main.infoDictionary ?? [:]
     ) {
+        let path = DevicePathConfiguration.resolve(
+            environment: environment,
+            infoDictionary: infoDictionary
+        )
+        usesMockDevice = path.useMockDevice
+        devicePath = path.path
+        wearable = path.useMockDevice ? DATMockWearableSession() : DATRealWearableSession()
+        status = path.useMockDevice ? "Mock pair not started" : "Real DAT not started"
+
         let resolved = BobBridgeConfiguration.makeService(
             environment: environment,
             infoDictionary: infoDictionary
@@ -41,46 +53,69 @@ final class CompanionSessionController: ObservableObject {
         bob = resolved.service
         bridgeMode = resolved.configuration.resolvedMode.rawValue
         bridgeStatus = resolved.configuration.logLine
+        print(path.logLine)
+
+        wearable.onChange = { [weak self] in
+            self?.syncWearableFields()
+        }
     }
 
     var isListening: Bool { phase == .listening || phase == .thinking }
 
-    func bootstrapMock() async {
-        guard phase == .idle || phase == .failed else { return }
+    var metaAIUsed: Bool { wearable.metaAIUsed }
+
+    /// Honest capture tag. HFP is not wired on either path.
+    var sttSummary: String {
+        let mic = liveSTTAvailable ? "live" : "mic not granted"
+        let ai = metaAIUsed ? "used" : "none"
+        return "stt_source=phone_mic (\(mic)) · hfp=not_wired · meta_ai=\(ai)"
+    }
+
+    func bootstrap() async {
+        guard phase == .idle || phase == .failed || phase == .pairing else { return }
         phase = .pairing
-        status = "MockDeviceKit.enable → pair .metaGlasses"
+        status = usesMockDevice
+            ? "MockDeviceKit.enable → pair .metaGlasses"
+            : "Meta AI registration"
         do {
-            let paired = try await wearable.pairMetaGlasses()
-            registration = wearable.registration
-            sessionState = wearable.sessionState
-            status = "Paired \(paired.deviceType) · \(paired.note)"
-            phase = .ready
-            print("[DAT] mock session-up pair ok deviceType=\(paired.deviceType) meta_ai=none")
+            let paired = try await wearable.prepare()
+            syncWearableFields()
+            if wearable.isReadyToStartSession {
+                status = readyStatus(paired)
+                phase = .ready
+                let ai = paired.metaAIUsed ? "used" : "none"
+                print("[DAT] session-up device_path=\(devicePath.rawValue) deviceType=\(paired.deviceType) meta_ai=\(ai)")
+            } else {
+                phase = .pairing
+                status = paired.note
+            }
         } catch {
             phase = .failed
             status = error.localizedDescription
-            await speakAndLogFail(
-                note: error.localizedDescription,
-                sessionId: nil,
-                spokenLine: BobBridgeError.failSpokenLine(for: error)
-            )
+            registration = wearable.registration
+            if shouldSpeakSessionCut(error) {
+                await speakAndLogFail(
+                    note: error.localizedDescription,
+                    sessionId: nil,
+                    spokenLine: BobBridgeError.failSpokenLine(for: error)
+                )
+            }
         }
     }
 
     func talkToBob() async {
-        if phase == .idle || phase == .failed {
-            await bootstrapMock()
+        if phase == .idle || phase == .failed || phase == .pairing {
+            await bootstrap()
         }
         guard phase == .ready || phase == .ended else { return }
 
         do {
-            status = "Starting DAT DeviceSession"
+            status = "Starting DAT DeviceSession · device_path=\(devicePath.rawValue)"
             let id = try await wearable.startDeviceSession()
             sessionId = id
-            sessionState = wearable.sessionState
-            registration = wearable.registration
+            syncWearableFields()
             phase = .listening
-            status = "Listening · stt_source=phone_mic"
+            status = listeningStatus
             await speakAndLog(
                 path: .start,
                 role: .open,
@@ -98,23 +133,28 @@ final class CompanionSessionController: ObservableObject {
                 }
             }
 
-            // First proof: one complete round-trip after mock pair + CTA without requiring speech.
-            await handleUtterance("What's next?", capture: .demoInjected)
+            // Mock demo still injects one utterance so the first proof logs without speech.
+            // Real path waits for the phone mic (HFP is not wired).
+            if usesMockDevice {
+                await handleUtterance("What's next?", capture: .demoInjected)
+            }
         } catch {
             phase = .failed
             status = error.localizedDescription
-            await speakAndLogFail(
-                note: error.localizedDescription,
-                sessionId: sessionId,
-                spokenLine: BobBridgeError.failSpokenLine(for: error)
-            )
+            if shouldSpeakSessionCut(error) {
+                await speakAndLogFail(
+                    note: error.localizedDescription,
+                    sessionId: sessionId,
+                    spokenLine: BobBridgeError.failSpokenLine(for: error)
+                )
+            }
         }
     }
 
     func endSession() async {
         recognizer.stop()
         wearable.stopDeviceSession()
-        sessionState = wearable.sessionState
+        syncWearableFields()
         let id = sessionId
         sessionId = nil
         phase = .ended
@@ -142,6 +182,36 @@ final class CompanionSessionController: ObservableObject {
         }
     }
 
+    private var listeningStatus: String {
+        "Listening · stt_source=phone_mic · hfp=not_wired · meta_ai=\(metaAIUsed ? "used" : "none")"
+    }
+
+    private func readyStatus(_ paired: PairedGlasses) -> String {
+        if usesMockDevice {
+            return "Paired \(paired.deviceType) · \(paired.note)"
+        }
+        return "Selected \(paired.deviceType) · Meta AI registered · \(paired.note)"
+    }
+
+    private func syncWearableFields() {
+        registration = wearable.registration
+        sessionState = wearable.sessionState
+        if phase == .pairing, wearable.isReadyToStartSession {
+            phase = .ready
+            status = "Selected \(HardwareContext.deviceTypeLogValue) · registration \(registration)"
+        }
+    }
+
+    private func shouldSpeakSessionCut(_ error: Error) -> Bool {
+        guard let wearableError = error as? WearableSessionError else { return true }
+        switch wearableError {
+        case .registrationFailed, .noMetaGlasses, .datUnavailable, .notPaired, .mockKitUnavailable:
+            return false
+        case .pairFailed, .sessionFailed:
+            return true
+        }
+    }
+
     private func handleUtterance(_ text: String, capture: STTCapture) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -149,7 +219,7 @@ final class CompanionSessionController: ObservableObject {
 
         lastUtterance = trimmed
         phase = .thinking
-        status = "BobBridge · stt_source=phone_mic · \(capture.rawValue)"
+        status = "BobBridge · stt_source=phone_mic · hfp=not_wired · \(capture.rawValue)"
 
         do {
             let request = BobBridgeRequest(
@@ -167,10 +237,10 @@ final class CompanionSessionController: ObservableObject {
                 sttSource: .phoneMic,
                 sttCapture: capture,
                 deskFull: response.deskFull,
-                note: "utterance=\(trimmed)"
+                note: "utterance=\(trimmed) hfp_not_wired"
             )
             phase = .listening
-            status = "Listening · stt_source=phone_mic"
+            status = listeningStatus
         } catch {
             phase = .failed
             recognizer.stop()
@@ -204,7 +274,8 @@ final class CompanionSessionController: ObservableObject {
             spokenLine: line,
             spokenRole: role,
             deskFull: deskFull,
-            metaAIUsed: false,
+            metaAIUsed: metaAIUsed,
+            devicePath: devicePath,
             note: note
         )
         log.append(entry)

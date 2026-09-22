@@ -2,7 +2,10 @@ import AVFoundation
 import Foundation
 import Speech
 
-/// Phone-microphone STT. Always tagged `stt_source = phone_mic` (HFP is out of scope).
+/// Phone-microphone STT.
+/// Mock and real DAT both tag `stt_source = phone_mic`.
+/// Do not switch this recognizer to HFP until the audio input port is the glasses SCO route.
+/// `AVAudioSession` category option `.allowBluetooth` is intentionally not set here.
 @MainActor
 final class PhoneMicRecognizer {
     private let audioEngine = AVAudioEngine()

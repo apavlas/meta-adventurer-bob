@@ -18,7 +18,7 @@ struct ContentView: View {
             }
             .navigationTitle("Bob")
             .task {
-                await session.bootstrapMock()
+                await session.bootstrap()
             }
         }
     }
@@ -27,19 +27,30 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Chief of Staff")
                 .font(.title2.weight(.semibold))
-            Text("\(HardwareContext.productName) · variant \(HardwareContext.variant) · mock \(HardwareContext.deviceTypeLogValue)")
+            Text(headerLine)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            if session.usesMockDevice {
+                Text("mock means MockDeviceKit is on. deviceType stays \(HardwareContext.deviceTypeLogValue).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
+    }
+
+    private var headerLine: String {
+        let path = session.usesMockDevice ? "mock" : "real"
+        return "\(HardwareContext.productName) · variant \(HardwareContext.variant) · path \(path) · \(HardwareContext.deviceTypeLogValue)"
     }
 
     private var statusBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             labeled("Status", session.status)
+            labeled("Path", session.usesMockDevice ? "mock · MockDeviceKit" : "real · Meta AI")
             labeled("Registration", session.registration)
             labeled("Device session", session.sessionState)
             labeled("BobBridge", session.bridgeMode)
-            labeled("STT", session.liveSTTAvailable ? "phone_mic live" : "phone_mic (demo inject until mic is granted)")
+            labeled("STT", session.sttSummary)
             if !session.lastSpoken.isEmpty {
                 labeled("Last spoken", session.lastSpoken)
             }
@@ -85,7 +96,9 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Golden-path demos")
                 .font(.headline)
-            Text("Talk to Bob already logs start + stub reply. These inject extra phone_mic utterances.")
+            Text(session.usesMockDevice
+                ? "Talk to Bob logs start plus a demo phone_mic utterance. These buttons inject more."
+                : "Talk to Bob starts a real DAT session. STT stays phone_mic until HFP is wired. These buttons inject phone_mic utterances.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             HStack {
@@ -101,7 +114,9 @@ struct ContentView: View {
             Text("Round-trip log")
                 .font(.headline)
             if session.log.entries.isEmpty {
-                Text("Pair, then tap Talk to Bob. Console and this list should show deviceType=META_GLASSES, stt_source=phone_mic, and spoken_line caps.")
+                Text(session.usesMockDevice
+                    ? "Pair, then tap Talk to Bob. Console and this list should show device_path=mock, deviceType=META_GLASSES, meta_ai=none, stt_source=phone_mic."
+                    : "With Meta AI Connected, tap Talk to Bob. Log shows device_path=real, deviceType=META_GLASSES, meta_ai=used, stt_source=phone_mic (HFP not wired).")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {

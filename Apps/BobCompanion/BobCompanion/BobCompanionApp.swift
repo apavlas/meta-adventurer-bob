@@ -10,7 +10,9 @@ struct BobCompanionApp: App {
     @StateObject private var session = CompanionSessionController()
 
     init() {
-        DATBootstrap.prepareMockPath()
+        let path = DevicePathConfiguration.resolve()
+        print(path.logLine)
+        DATBootstrap.prepare(useMockDevice: path.useMockDevice)
     }
 
     var body: some Scene {
@@ -28,26 +30,37 @@ struct BobCompanionApp: App {
 }
 
 enum DATBootstrap {
-    /// Enable MockDeviceKit before the first SwiftUI frame so DAT registration
-    /// uses fake providers. `initiallyRegistered: true` means no Meta AI hop.
-    static func prepareMockPath() {
+    /// Configure DAT. `MockDeviceKit.enable` runs only when `BOB_USE_MOCK_DEVICE` resolves YES.
+    /// Device runs default to real: `Wearables.configure()` and no mock providers.
+    static func prepare(useMockDevice: Bool) {
         #if canImport(MWDATCore)
-        do {
-            try Wearables.configure()
-        } catch {
-            // MockDeviceKit.enable auto-configures Wearables if needed;
-            // a second configure() throws alreadyConfigured.
-        }
+        configureWearables()
         #endif
 
+        guard useMockDevice else {
+            print("[DAT] BOB_USE_MOCK_DEVICE=NO — MockDeviceKit.enable not called")
+            return
+        }
+
         #if canImport(MWDATMockDevice)
-        importMockAndEnable()
+        MockDeviceBootstrap.enable()
+        #else
+        print("[DAT] BOB_USE_MOCK_DEVICE=YES but MWDATMockDevice is not linked")
         #endif
     }
 
-    #if canImport(MWDATMockDevice)
-    private static func importMockAndEnable() {
-        MockDeviceBootstrap.enable()
+    #if canImport(MWDATCore)
+    private static func configureWearables() {
+        do {
+            try Wearables.configure()
+            print("[DAT] Wearables.configure ok")
+        } catch let error as WearablesError
+            where error.rawValue == WearablesError.alreadyConfigured.rawValue
+        {
+            print("[DAT] Wearables.configure alreadyConfigured")
+        } catch {
+            print("[DAT] Wearables.configure failed \(error)")
+        }
     }
     #endif
 }

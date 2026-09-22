@@ -10,6 +10,7 @@ import MWDATMockDevice
 
 enum MockDeviceBootstrap {
     /// Official MockDeviceKit path: enable fake registration/device providers, then pair `.metaGlasses`.
+    /// Call only when `BOB_USE_MOCK_DEVICE` resolves YES.
     static func enable() {
         #if canImport(MWDATMockDevice)
         let kit = MockDeviceKit.shared
@@ -20,46 +21,24 @@ enum MockDeviceBootstrap {
                 initialPermissionsGranted: true
             )
         )
-        print("[DAT] MockDeviceKit.enabled initiallyRegistered=true meta_ai=none")
+        print("[DAT] MockDeviceKit.enabled initiallyRegistered=true meta_ai=none device_path=mock")
         #else
         print("[DAT] MWDATMockDevice unavailable — pair is stubbed")
         #endif
     }
 }
 
-struct PairedMockDevice: Sendable {
-    var deviceType: String
-    var glassesModel: String
-    var note: String
-}
-
-enum WearableSessionError: Error, LocalizedError {
-    case mockKitUnavailable
-    case pairFailed(String)
-    case sessionFailed(String)
-    case notPaired
-
-    var errorDescription: String? {
-        switch self {
-        case .mockKitUnavailable:
-            return "MockDeviceKit is not linked in this build."
-        case .pairFailed(let message):
-            return message
-        case .sessionFailed(let message):
-            return message
-        case .notPaired:
-            return "Pair .metaGlasses before starting a session."
-        }
-    }
-}
-
 /// DAT mock pair / register / session. Camera stays off for voice v0.
+/// Used only when the mock path gate is YES.
 @MainActor
-final class DATMockWearableSession {
-    private(set) var paired: PairedMockDevice?
+final class DATMockWearableSession: WearableSessionControlling {
+    private(set) var paired: PairedGlasses?
     private(set) var registration = "unknown"
     private(set) var sessionState = "idle"
-    private(set) var sessionId: String?
+    var onChange: (@MainActor () -> Void)?
+
+    var metaAIUsed: Bool { false }
+    var isReadyToStartSession: Bool { paired != nil }
 
     #if canImport(MWDATMockDevice)
     private var mockGlasses: (any MockGlasses)?
@@ -69,7 +48,7 @@ final class DATMockWearableSession {
     private var stateTask: Task<Void, Never>?
     #endif
 
-    func pairMetaGlasses() async throws -> PairedMockDevice {
+    func prepare() async throws -> PairedGlasses {
         MockDeviceBootstrap.enable()
 
         #if canImport(MWDATMockDevice)
@@ -80,23 +59,26 @@ final class DATMockWearableSession {
         glasses.don()
         mockGlasses = glasses
 
-        let info = PairedMockDevice(
+        let info = PairedGlasses(
             deviceType: HardwareContext.deviceTypeLogValue,
             glassesModel: HardwareContext.glassesModelSymbol,
-            note: "GlassesModel.metaGlasses variant=\(HardwareContext.variant)"
+            note: "GlassesModel.metaGlasses variant=\(HardwareContext.variant)",
+            metaAIUsed: false
         )
         paired = info
         await refreshRegistration(expectMock: true)
-        print("[DAT] paired model=.\(info.glassesModel) deviceType=\(info.deviceType) \(info.note)")
+        print("[DAT] paired model=.\(info.glassesModel) deviceType=\(info.deviceType) device_path=mock \(info.note)")
         return info
         #else
-        let info = PairedMockDevice(
+        let info = PairedGlasses(
             deviceType: HardwareContext.deviceTypeLogValue,
             glassesModel: HardwareContext.glassesModelSymbol,
-            note: "DAT XCFramework not present in this compile"
+            note: "DAT XCFramework not present in this compile",
+            metaAIUsed: false
         )
         paired = info
         registration = "registered (compile-stub, no Meta AI)"
+        publish()
         return info
         #endif
     }
@@ -121,14 +103,12 @@ final class DATMockWearableSession {
         let session = try wearables.createSession(deviceSelector: selector)
         deviceSession = session
         let id = UUID().uuidString
-        sessionId = id
 
-        let started = Task {
+        let started = Task { @MainActor in
             for await state in session.stateStream() {
-                await MainActor.run {
-                    self.sessionState = String(describing: state)
-                    print("[DAT] DeviceSession.state=\(state)")
-                }
+                self.sessionState = String(describing: state)
+                self.publish()
+                print("[DAT] DeviceSession.state=\(state) device_path=mock")
                 if state == .started { return }
                 if state == .stopped {
                     throw WearableSessionError.sessionFailed("DeviceSession stopped before start")
@@ -147,12 +127,12 @@ final class DATMockWearableSession {
             group.cancelAll()
         }
         // Voice v0: do not call session.addCamera / Stream. Camera stays off.
-        print("[DAT] DeviceSession.started session_id=\(id) camera=off")
+        print("[DAT] DeviceSession.started session_id=\(id) camera=off device_path=mock")
         return id
         #else
         let id = UUID().uuidString
-        sessionId = id
         sessionState = "started (compile-stub)"
+        publish()
         return id
         #endif
     }
@@ -165,7 +145,7 @@ final class DATMockWearableSession {
         deviceSession = nil
         #endif
         sessionState = "stopped"
-        sessionId = nil
+        publish()
     }
 
     private func refreshRegistration(expectMock: Bool) async {
@@ -173,12 +153,11 @@ final class DATMockWearableSession {
         let timeout = Task {
             try await Task.sleep(nanoseconds: 1_500_000_000)
         }
-        let observe = Task {
+        let observe = Task { @MainActor in
             for await state in Wearables.shared.registrationStateStream() {
-                await MainActor.run {
-                    self.registration = "\(state)\(expectMock ? " (mock, no Meta AI)" : "")"
-                    print("[DAT] registration=\(self.registration)")
-                }
+                self.registration = "\(state)\(expectMock ? " (mock, no Meta AI)" : "")"
+                self.publish()
+                print("[DAT] registration=\(self.registration)")
                 if String(describing: state).lowercased().contains("registered") {
                     return
                 }
@@ -191,9 +170,15 @@ final class DATMockWearableSession {
         observe.cancel()
         if !registration.lowercased().contains("registered") && expectMock {
             registration = "registered (mock initiallyRegistered, no Meta AI)"
+            publish()
         }
         #else
         registration = "registered (compile-stub, no Meta AI)"
+        publish()
         #endif
+    }
+
+    private func publish() {
+        onChange?()
     }
 }
