@@ -9,6 +9,10 @@ import Foundation
 /// newer SDKs name it `.allowBluetoothHFP`), then `setPreferredInput` on `BluetoothHFP`.
 /// A2DP does not provide a mic. `.defaultToSpeaker` is omitted here because forcing the
 /// phone speaker also keeps the built-in microphone.
+///
+/// After TTS, the route can already say `BluetoothHFP` while the SCO uplink is still
+/// the playback graph. Capture prefers 16 kHz mono, re-asserts the HFP input, and
+/// reactivates the session so the engine's tap is not installed on an empty converter.
 @MainActor
 final class GlassesAudioSession {
     let allowsHFP: Bool
@@ -21,8 +25,25 @@ final class GlassesAudioSession {
         self.allowsHFP = allowsHFP
     }
 
+    /// Drop the synthesizer's hold on SCO. Call this only after a spoken line has
+    /// finished. Doing it before the open line can drop `hfp=wired` off the START card.
+    func releaseSynthesizerRoute() {
+        guard allowsHFP else { return }
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
     func prepareForCapture() async throws -> AudioInputDecision {
-        try configureCapture()
+        _ = try configureCapture()
+        guard allowsHFP else { return currentDecision() }
+        do {
+            try reassertHandsFreeInput()
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("[Audio] hfp reassert failed \(error.localizedDescription)")
+        }
+        let settled = currentDecision()
+        publish(settled)
+        return settled
     }
 
     /// Meta: after the audio engine starts, the HFP route needs a moment before `currentRoute` shows the glasses mic.
@@ -93,6 +114,19 @@ final class GlassesAudioSession {
         print("[Audio] preferred_input=\(token)")
     }
 
+    /// Call `setPreferredInput` again at capture start. The route can already be HFP
+    /// after TTS while the record direction of SCO is not attached to this session.
+    func reassertHandsFreeInput() throws {
+        guard allowsHFP else { return }
+        let session = AVAudioSession.sharedInstance()
+        let available = session.availableInputs ?? []
+        let ports = available.map { AudioInputPort(portType: $0.portType.rawValue, portName: $0.portName) }
+        guard let index = AudioInputClassifier.preferredHFPIndex(in: ports) else { return }
+        try session.setPreferredInput(available[index])
+        let token = AudioInputClassifier.routeToken(portType: ports[index].portType, portName: ports[index].portName)
+        print("[Audio] reassert_input=\(token)")
+    }
+
     func startObserving() {
         stopObserving()
         let session = AVAudioSession.sharedInstance()
@@ -124,6 +158,16 @@ final class GlassesAudioSession {
     private func apply(mode: AVAudioSession.Mode, options: AVAudioSession.CategoryOptions) throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: mode, options: options)
+        if allowsHFP {
+            do {
+                try session.setPreferredSampleRate(HFPCaptureGraph.preferredSampleRate)
+                try session.setPreferredIOBufferDuration(HFPCaptureGraph.preferredIOBufferDuration)
+            } catch {
+                print("[Audio] preferred_rate failed \(error.localizedDescription)")
+            }
+            // Mono matches SCO. A stereo bus here is a tap that SpeechKit never finals.
+            try? session.setPreferredInputNumberOfChannels(1)
+        }
         try session.setActive(true, options: .notifyOthersOnDeactivation)
     }
 

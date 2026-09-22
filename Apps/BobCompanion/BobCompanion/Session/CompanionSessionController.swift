@@ -295,8 +295,12 @@ final class CompanionSessionController: ObservableObject {
         guard !usesMockDevice else { return }
         guard phase == .listening, sessionId != nil else { return }
         listenGeneration += 1
+        let capture = recognizer.captureSummary()
         recognizer.stop()
-        let note = LiveListenPolicy.noFinalLogNote(routeToken: inputDecision.loggedRoute)
+        let note = LiveListenPolicy.noFinalLogNote(
+            routeToken: inputDecision.loggedRoute,
+            capture: capture
+        )
         print("[Audio] \(note) action=retry_prompt")
         await speakAndLog(
             path: .noFinal,
