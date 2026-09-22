@@ -120,20 +120,26 @@ Resolution order: process environment, then `Info.plist` / xcconfig. Unexpanded 
 | Key | Meaning |
 |---|---|
 | `BOB_BRIDGE_MODE` | `stub` (default) or `remote` |
-| `BOB_BRIDGE_BASE_URL` | Origin only, e.g. `https://bob-bridge.example.invalid` — no live URL in this repo |
+| `BOB_BRIDGE_BASE_URL` | Origin only — no live URL committed in this repo |
 | `BOB_BRIDGE_BEARER_TOKEN` | Bearer token. Never commit it. |
 
 If mode is `remote` but the URL or token is missing, the app **stays on stub** and logs why (`[BobBridge] … reason=…`).
 
+**xcconfig HTTPS trap:** In `.xcconfig`, `//` starts a comment. Writing `BOB_BRIDGE_BASE_URL = https://bob-bridge.fly.dev` silently truncates to `https:` (Bearer can still look fine while remote calls fail with RoundTrip `note=sessionCut`). Escape the double slash with an empty `$()` expansion:
+
+```xcconfig
+BOB_BRIDGE_BASE_URL = https:/$()/bob-bridge.fly.dev
+```
+
 Set them in any of:
 
-1. Xcode scheme Environment Variables (preferred for a token)
-2. `Apps/BobCompanion/Config/BobBridge.local.xcconfig` (gitignored), included from Debug/Release
+1. Xcode scheme Environment Variables (preferred for a token; plain `https://…` URLs are fine here)
+2. `Apps/BobCompanion/Config/BobBridge.local.xcconfig` (gitignored — never commit tokens), included from Debug/Release
 3. `Apps/BobCompanion/Config/BobBridge.xcconfig` placeholders (empty in git)
 
 ```xcconfig
 BOB_BRIDGE_MODE = remote
-BOB_BRIDGE_BASE_URL = https://your-injected-host.example
+BOB_BRIDGE_BASE_URL = https:/$()/bob-bridge.fly.dev
 BOB_BRIDGE_BEARER_TOKEN = your-local-token
 ```
 
