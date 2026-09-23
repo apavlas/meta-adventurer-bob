@@ -156,6 +156,8 @@ Mock path (`BOB_USE_MOCK_DEVICE=YES`), in order:
 
 Locked OpenAPI 3.0.3: [`docs/bobbridge-openapi.yaml`](docs/bobbridge-openapi.yaml).
 
+Omi phone chat (Ask Bob) is a separate adapter contract: [`docs/omi/`](docs/omi/).
+
 **HTTPS** `POST /v0/bob/turn` with Bearer auth.
 
 **Request JSON (required):** `session_id`, `utterance`, `stt_source` (`phone_mic` \| `hfp`)
