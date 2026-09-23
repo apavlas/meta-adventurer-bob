@@ -1,0 +1,26 @@
+{
+  "tools": [
+    {
+      "name": "ask_bob",
+      "description": "Ask Bob (Anton's CoS). Use this when the user wants Bob's next step or a short spoken answer. Required parameter: utterance.",
+      "endpoint": "/v0/omi/tools/ask_bob",
+      "method": "POST",
+      "parameters": {
+        "properties": {
+          "utterance": {
+            "type": "string",
+            "description": "What to ask Bob, in the user's words."
+          }
+        },
+        "required": ["utterance"]
+      },
+      "auth_required": false,
+      "status_message": "Asking Bob..."
+    }
+  ],
+  "chat_messages": {
+    "enabled": false,
+    "target": "app",
+    "notify": false
+  }
+}

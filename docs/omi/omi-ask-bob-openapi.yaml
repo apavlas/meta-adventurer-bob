@@ -1,0 +1,315 @@
+openapi: 3.0.3
+info:
+  title: Omi Ask Bob
+  version: 0.1.0
+  description: |
+    Omi Chat Tools adapter in front of the existing BobBridge turn
+    (`POST /v0/bob/turn`, see [`../bobbridge-openapi.yaml`](../bobbridge-openapi.yaml)).
+
+    Public surface, served at `https://bob-bridge.fly.dev`:
+
+    - `GET /.well-known/omi-tools.json` — the Chat Tools manifest in
+      [`omi-tools.json`](omi-tools.json). One tool: `ask_bob`.
+    - `POST /v0/omi/tools/ask_bob` — Omi calls this when chat uses `ask_bob`.
+
+    Omi does not send the companion Bearer. The manifest sets
+    `auth_required` to false, so this public POST has no `Authorization`
+    header. The adapter attaches the companion Bearer server-side when it
+    calls `POST /v0/bob/turn`. That token is not part of this contract and
+    is not committed in this repo.
+
+    Adapter mapping (server-side, same host):
+
+    - `session_id` = `omi:{uid}:{app_id}`
+    - `utterance` = the tool parameter `utterance`
+    - `stt_source` = `phone_mic` (Omi chat is not the glasses HFP path)
+
+    BobBridge `200` `{ "spoken_line", "desk_full" }` becomes
+    `{ "result": "<spoken_line>" }`. Reply caps are the BobBridge reply
+    caps: ≤2 sentences and ~35 words. Over budget, `spoken_line` is
+    `Full note on desk.` and the long text stays in `desk_full`. Omi
+    receives only `result` (the spoken line). `desk_full` is not returned.
+
+    Inner `401` (companion Bearer rejected) and `503` (CoS unavailable)
+    both become `503` with `{ "error": "Session cut — check the phone." }`.
+    Do not return `401` to Omi: there is no user reconnect step.
+    `auth_required` is false.
+
+    Deferred (do not implement on this surface):
+
+    - Realtime transcript webhooks
+    - Proactive chat notify (`chat_messages.enabled` is false; do not call
+      `POST https://api.omi.me/v1/integrations/notification`)
+    - WebSocket / barge-in
+
+    This repository documents the contract. The Fly adapter (`server.js`)
+    is not in this repo.
+  contact:
+    name: Bob companion
+servers:
+  - url: https://bob-bridge.fly.dev
+    description: BobBridge host. The Omi adapter is served here; it is not the iOS app.
+paths:
+  /.well-known/omi-tools.json:
+    get:
+      operationId: getOmiToolsManifest
+      summary: Omi Chat Tools manifest
+      description: |
+        Public manifest Omi fetches from the Chat Tools Manifest URL.
+        Body is [`omi-tools.json`](omi-tools.json): one tool `ask_bob`
+        (`POST /v0/omi/tools/ask_bob`, `auth_required` false) and
+        `chat_messages.enabled` false.
+      security: []
+      responses:
+        '200':
+          description: Chat Tools manifest.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OmiToolsManifest'
+              example:
+                tools:
+                  - name: ask_bob
+                    description: >-
+                      Ask Bob (Anton's CoS). Use this when the user wants
+                      Bob's next step or a short spoken answer. Required
+                      parameter: utterance.
+                    endpoint: /v0/omi/tools/ask_bob
+                    method: POST
+                    parameters:
+                      properties:
+                        utterance:
+                          type: string
+                          description: What to ask Bob, in the user's words.
+                      required:
+                        - utterance
+                    auth_required: false
+                    status_message: Asking Bob...
+                chat_messages:
+                  enabled: false
+                  target: app
+                  notify: false
+  /v0/omi/tools/ask_bob:
+    post:
+      operationId: askBob
+      summary: Ask Bob from Omi chat
+      description: |
+        Omi POSTs the tool call here. No companion Bearer.
+
+        The adapter calls `POST /v0/bob/turn` with:
+
+        - `session_id`: `omi:{uid}:{app_id}`
+        - `utterance`: the `utterance` parameter
+        - `stt_source`: `phone_mic`
+
+        and returns `{ "result": "<spoken_line>" }` after reply caps
+        (≤2 sentences, ~35 words).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskBobRequest'
+            examples:
+              whatsNext:
+                summary: Omi chat asks Bob what is next
+                value:
+                  uid: omi-user
+                  app_id: ask-bob
+                  tool_name: ask_bob
+                  utterance: what's next
+      responses:
+        '200':
+          description: |
+            Turn completed. `result` is BobBridge `spoken_line` after reply caps.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskBobResult'
+              examples:
+                reply:
+                  value:
+                    result: Next up is the 2pm with Sue.
+                overBudget:
+                  summary: Longer desk text is not returned to Omi
+                  value:
+                    result: Full note on desk.
+        '400':
+          description: |
+            Missing `uid`, `app_id`, or `utterance`, or `tool_name` is present
+            and is not `ask_bob`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskBobError'
+              example:
+                error: 'Missing required parameter: utterance'
+        '503':
+          description: |
+            BobBridge returned 401 or 503, or the CoS is otherwise cut.
+            Spoken fail line, returned as `error` so Omi does not treat it
+            as a user-auth failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskBobError'
+              example:
+                error: Session cut — check the phone.
+components:
+  schemas:
+    OmiToolsManifest:
+      type: object
+      additionalProperties: false
+      required:
+        - tools
+        - chat_messages
+      properties:
+        tools:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/AskBobTool'
+        chat_messages:
+          $ref: '#/components/schemas/ChatMessages'
+    AskBobTool:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - endpoint
+        - method
+        - parameters
+        - auth_required
+      properties:
+        name:
+          type: string
+          enum:
+            - ask_bob
+        description:
+          type: string
+          description: Ask Bob (Anton's CoS). Required parameter utterance.
+        endpoint:
+          type: string
+          enum:
+            - /v0/omi/tools/ask_bob
+        method:
+          type: string
+          enum:
+            - POST
+        parameters:
+          $ref: '#/components/schemas/AskBobParameters'
+        auth_required:
+          type: boolean
+          enum:
+            - false
+        status_message:
+          type: string
+    AskBobParameters:
+      type: object
+      additionalProperties: false
+      required:
+        - properties
+        - required
+      properties:
+        properties:
+          type: object
+          additionalProperties: false
+          required:
+            - utterance
+          properties:
+            utterance:
+              type: object
+              additionalProperties: false
+              required:
+                - type
+                - description
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - string
+                description:
+                  type: string
+        required:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - utterance
+    ChatMessages:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          enum:
+            - false
+          description: Proactive chat messages stay off.
+        target:
+          type: string
+          enum:
+            - app
+        notify:
+          type: boolean
+          enum:
+            - false
+          description: Push notify stays off. Realtime transcript is deferred.
+    AskBobRequest:
+      type: object
+      description: |
+        Omi tool payload. `geolocation` and other extra fields may be present;
+        the adapter ignores them. No Authorization header.
+      required:
+        - uid
+        - app_id
+        - utterance
+      properties:
+        uid:
+          type: string
+          minLength: 1
+          description: Omi user id. Becomes the middle segment of `session_id`.
+        app_id:
+          type: string
+          minLength: 1
+          description: Omi app id. Becomes the last segment of `session_id`.
+        tool_name:
+          type: string
+          enum:
+            - ask_bob
+          description: Omi sends this. Reject any other value.
+        utterance:
+          type: string
+          minLength: 1
+          description: What to ask Bob. Forwarded as BobBridge `utterance`.
+        geolocation:
+          type: object
+          description: Optional Omi location. Ignored in v0.
+          additionalProperties: true
+      additionalProperties: true
+    AskBobResult:
+      type: object
+      additionalProperties: false
+      required:
+        - result
+      properties:
+        result:
+          type: string
+          minLength: 1
+          description: |
+            BobBridge `spoken_line` after reply caps (≤2 sentences, ~35 words).
+    AskBobError:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          minLength: 1
